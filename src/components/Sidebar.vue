@@ -1,13 +1,22 @@
 <template>
   <div class="side-bar">
     <RouterLink class="btn" to="/map">Map</RouterLink>
-    <RouterLink class="btn" to="/apply">Apply</RouterLink>
+    <RouterLink class="btn apply-link" to="/apply"
+      >Apply
+      <span class="notification" v-if="applicationsStore.pendingCount > 0">{{
+        applicationsStore.pendingCount
+      }}</span>
+    </RouterLink>
     <RouterLink class="btn" to="/stats">Stats</RouterLink>
     <RouterLink class="btn" to="/mypage">Mypage</RouterLink>
   </div>
 </template>
 
-<script setup></script>
+<script setup>
+import { useApplicationsStore } from '@/stores/applications';
+
+const applicationsStore = useApplicationsStore();
+</script>
 
 <style scoped>
 .side-bar {
@@ -24,6 +33,7 @@
   text-decoration: none;
   color: #111;
   border-radius: 8px;
+  position: relative;
 }
 .btn:hover {
   background: #e0e0e0;
@@ -31,5 +41,22 @@
 .router-link-active {
   background: #0ea5e9;
   color: #fff;
+}
+.apply-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.notification {
+  color: black;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 12px;
+  min-width: 12px;
+  text-align: center;
+  position: absolute;
+  top: 10px;
+  right: 12px;
 }
 </style>
