@@ -155,6 +155,7 @@ onMounted(() => {
             },
           });
 
+          // info 창
           const contentString = `
              <div class="info-card">
                <div class="info-header">
@@ -193,7 +194,6 @@ onMounted(() => {
                 return;
               }
             }
-            // highlightPolygon 함수 호출
             highlightPolygon(item.city);
 
             infowindow.open(map, marker);
