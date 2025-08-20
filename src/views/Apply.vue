@@ -1,6 +1,7 @@
 <template>
   <div class="main-container">
     <Map :centerCoords="{ lat: 35.154914, lng: 128.8 }" />
+
     <div class="menu-container" v-if="!isApplying">
       <div class="filter-bar">
         <button class="filter-item" @click="isFilterOpen = !isFilterOpen">
@@ -16,10 +17,12 @@
             <button class="filter-item"><i class="fa-solid fa-truck-medical"></i> 위험 동물</button>
           </div>
         </transition>
-        <button class="filter-apply" @click="submit" :disabled="selectedImages.length === 0">
+
+        <button class="filter-apply" @click="openModal" :disabled="selectedImages.length === 0">
           이관 신청
         </button>
       </div>
+
       <div class="image-list">
         <div
           class="image-item"
@@ -29,7 +32,6 @@
         >
           <img :src="image.src" alt="Sample Image" />
           <div class="overlay"></div>
-          <!-- 나중에 위험동물 v-if 추가 -->
           <div class="danger-tag-container">
             <span>위험 동물</span>
           </div>
@@ -42,70 +44,37 @@
           </div>
         </div>
       </div>
+
       <div class="selected-count">{{ selectedImages.length }}마리 선택됨</div>
     </div>
 
-    <div class="menu-container" v-else>
-      <div class="application-container">
-        <h2>이관 신청</h2>
-        <div class="shelter-list">
-          <div class="shelter-item" v-for="shelter in destinationShelters" :key="shelter.careNm">
-            <span>{{ shelter.careNm }}</span>
-            <div class="button-group">
-              <button
-                class="apply-button"
-                @click="applyToShelter(shelter)"
-                v-if="shelter.status === 'none'"
-              >
-                신청
-              </button>
-              <template v-else-if="shelter.status === 'applying'">
-                <button class="status-button">신청중</button>
-                <button class="cancel-button" @click="cancelApplication(shelter)">취소</button>
-              </template>
-            </div>
+    <RightModal v-if="isRightModalOpen" title="이관 신청 대상 선택" @close="closeModal">
+      <div class="shelter-list in-modal">
+        <div class="shelter-item" v-for="shelter in destinationShelters" :key="shelter.careNm">
+          <div class="shelter-info">
+            <strong>{{ shelter.careNm }}</strong>
+            <small>{{ shelter.careAddr }}</small>
+          </div>
+          <div class="button-group">
+            <button class="apply-button" @click="applyToShelterFromModal(shelter)">신청</button>
           </div>
         </div>
-
-        <div class="received-applications-container">
-          <h2>접수 내역</h2>
-          <div class="shelter-list">
-            <div
-              class="shelter-item"
-              v-for="shelter in applicationsStore.applications"
-              :key="shelter.careNm"
-            >
-              <span>{{ shelter.careNm }}</span>
-              <div class="button-group">
-                <template v-if="shelter.status === 'pending'">
-                  <button class="accept-button" @click="acceptApplication(shelter)">수락</button>
-                  <button class="reject-button" @click="rejectApplication(shelter)">거절</button>
-                </template>
-                <template v-else-if="shelter.status === 'accepted'">
-                  <span class="status-text accepted">수락됨</span>
-                </template>
-                <template v-else-if="shelter.status === 'rejected'">
-                  <span class="status-text rejected">거절됨</span>
-                </template>
-              </div>
-            </div>
-          </div>
-        </div>
-        <button class="back-button" @click="isApplying = false">돌아가기</button>
       </div>
-    </div>
+    </RightModal>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import Map from '@/views/Map.vue';
 import sampleImage from '@/assets/images/sample.png';
 import { useApplicationsStore } from '@/stores/applications';
+import RightModal from '@/components/RightModal.vue';
 
 const isFilterOpen = ref(false);
 const isApplying = ref(false);
 const selectedImages = ref([]);
+const isRightModalOpen = ref(false);
 const destinationShelters = ref([]);
 
 const applicationsStore = useApplicationsStore();
@@ -178,53 +147,35 @@ const images = ref([
   { id: 14, src: sampleImage, careNm: '부산동물보호센터' },
 ]);
 
-// 이미지 선택
+const currentShelterName = computed(() => images.value[0]?.careNm ?? '');
+
 const toggleSelect = (id) => {
-  const index = selectedImages.value.indexOf(id);
-  if (index === -1) {
-    selectedImages.value.push(id);
-  } else {
-    selectedImages.value.splice(index, 1);
-  }
-  console.log('Selected Images:', selectedImages.value);
+  const idx = selectedImages.value.indexOf(id);
+  if (idx === -1) selectedImages.value.push(id);
+  else selectedImages.value.splice(idx, 1);
 };
 
-const isSelected = (id) => {
-  return selectedImages.value.includes(id);
+const isSelected = (id) => selectedImages.value.includes(id);
+
+const openModal = () => {
+  destinationShelters.value = shelters.value.filter((s) => s.careNm !== currentShelterName.value);
+  isRightModalOpen.value = true;
 };
 
-const submit = () => {
-  if (selectedImages.value.length === 0) {
-    return;
-  }
-
-  const currentShelter = images.value[0].careNm;
-
-  destinationShelters.value = shelters.value
-    .filter((shelter) => shelter.careNm !== currentShelter)
-    .map((shelter) => ({ ...shelter, status: 'none' }));
-
-  isApplying.value = true;
+const closeModal = () => {
+  isRightModalOpen.value = false;
 };
 
-const applyToShelter = (shelter) => {
-  shelter.status = 'applying';
-  console.log(`'${shelter.careNm}' 보호소로 이관 신청 중...`);
-};
-
-const cancelApplication = (shelter) => {
-  shelter.status = 'none';
-  console.log(`'${shelter.careNm}' 보호소로의 신청이 취소되었습니다.`);
-};
-
-const acceptApplication = (app) => {
-  app.status = 'accepted';
-  console.log(`'${app.careNm}'의 신청을 수락했습니다.`);
-};
-
-const rejectApplication = (app) => {
-  app.status = 'rejected';
-  console.log(`'${app.careNm}'의 신청을 거절했습니다.`);
+const applyToShelterFromModal = (targetShelter) => {
+  const payload = {
+    fromShelter: currentShelterName.value,
+    toShelter: targetShelter.careNm,
+    animalIds: [...selectedImages.value],
+  };
+  applicationsStore.sendApplication(payload);
+  closeModal();
+  selectedImages.value = [];
+  console.log(`'${targetShelter.careNm}'로 이관 신청 완료`);
 };
 </script>
 
@@ -234,7 +185,6 @@ const rejectApplication = (app) => {
   width: 100%;
   height: 97vh;
 }
-
 .menu-container {
   position: absolute;
   top: 0;
@@ -244,11 +194,10 @@ const rejectApplication = (app) => {
   width: 600px;
   height: 100%;
   background-color: #f0f2f5;
-  padding: 10px 10px -10px 10px;
+  padding: 10px;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   z-index: 10;
 }
-
 .filter-bar {
   display: flex;
   flex-direction: row;
@@ -257,24 +206,20 @@ const rejectApplication = (app) => {
   margin-bottom: 10px;
   margin-left: 10px;
 }
-
 .filter-item {
   margin-top: 5px;
   margin-right: 10px;
   padding: 4px 8px;
 }
-
 .filter-apply {
   margin-left: auto;
   margin-right: 10px;
 }
-
 .filter-fade-enter-from,
 .filter-fade-leave-to {
   opacity: 0;
   transform: translateX(-10px);
 }
-
 .filter-fade-enter-active,
 .filter-fade-leave-active {
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -286,7 +231,6 @@ const rejectApplication = (app) => {
   gap: 10px;
   overflow-y: auto;
 }
-
 .image-item {
   position: relative;
   width: 100%;
@@ -295,7 +239,6 @@ const rejectApplication = (app) => {
   border-radius: 8px;
   overflow: hidden;
 }
-
 .image-item img {
   position: absolute;
   top: 0;
@@ -305,11 +248,9 @@ const rejectApplication = (app) => {
   object-fit: cover;
   transition: transform 0.3s ease;
 }
-
 .image-item:hover img {
   transform: scale(1.05);
 }
-
 .overlay {
   position: absolute;
   top: 0;
@@ -323,7 +264,9 @@ const rejectApplication = (app) => {
   opacity: 0;
   transition: opacity 0.3s ease;
 }
-
+.image-item:hover .overlay {
+  opacity: 1;
+}
 .danger-tag-container {
   position: absolute;
   top: 5px;
@@ -336,11 +279,6 @@ const rejectApplication = (app) => {
   font-size: 12px;
   font-weight: bold;
 }
-
-.image-item:hover .overlay {
-  opacity: 1;
-}
-
 .checkbox-container {
   position: absolute;
   top: 5px;
@@ -351,12 +289,43 @@ const rejectApplication = (app) => {
   font-size: 24px;
   transition: color 0.2s ease-in-out;
 }
-
 .fa-circle-check.is-selected {
   color: #ffffff;
 }
 .fa-circle {
   color: #ffffff;
+}
+
+.shelter-list.in-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+}
+.shelter-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.shelter-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 2px;
+}
+.apply-button {
+  padding: 6px 12px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .selected-count {
@@ -372,100 +341,5 @@ const rejectApplication = (app) => {
   font-size: 14px;
   font-weight: bold;
   pointer-events: none;
-}
-
-.application-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  height: 100%;
-  padding: 20px;
-  text-align: center;
-}
-
-.shelter-list {
-  width: 100%;
-  margin-top: 20px;
-  flex-grow: 1;
-  overflow-y: auto;
-}
-
-.shelter-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 12px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 10px;
-  font-weight: bold;
-}
-
-.apply-button {
-  padding: 6px 12px;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.status-button {
-  padding: 6px 12px;
-  background-color: #ffc107;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.cancel-button {
-  padding: 6px 12px;
-  background-color: #dc3545;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.back-button {
-  margin-top: auto;
-  padding: 10px 20px;
-  background-color: #000000;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-}
-
-.received-applications-container {
-  width: 100%;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #ddd;
-}
-
-.accept-button {
-  padding: 6px 12px;
-  background-color: #28a745;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.reject-button {
-  padding: 6px 12px;
-  background-color: #dc3545;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  white-space: nowrap;
 }
 </style>
