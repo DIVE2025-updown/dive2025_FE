@@ -1,36 +1,61 @@
-import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 
-export const useApplicationsStore = defineStore('applications', () => {
-  const applications = ref([
-    { careNm: '(사)유기동물 및 동물보호관리협회', status: 'pending' },
-    { careNm: '누리동물병원', status: 'pending' },
-  ]);
+export const useApplicationsStore = defineStore('applications', {
+  state: () => ({
+    sentApplications: [],
+    receivedApplications: [],
+  }),
 
-  const pendingCount = computed(() => {
-    return applications.value.filter((app) => app.status === 'pending').length;
-  });
+  actions: {
+    _uuid() {
+      return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    },
 
-  const acceptApplication = (app) => {
-    const foundApp = applications.value.find((a) => a.careNm === app.careNm);
-    if (foundApp) {
-      foundApp.status = 'accepted';
-      console.log(`'${app.careNm}'의 신청을 수락했습니다.`);
-    }
-  };
+    sendApplication(payload) {
+      const id = this._uuid();
+      const now = new Date().toISOString();
 
-  const rejectApplication = (app) => {
-    const foundApp = applications.value.find((a) => a.careNm === app.careNm);
-    if (foundApp) {
-      foundApp.status = 'rejected';
-      console.log(`'${app.careNm}'의 신청을 거절했습니다.`);
-    }
-  };
+      this.sentApplications.unshift({
+        id,
+        fromShelter: payload.fromShelter,
+        toShelter: payload.toShelter,
+        animalIds: payload.animalIds,
+        status: 'applying',
+        createdAt: now,
+      });
 
-  return {
-    applications,
-    pendingCount,
-    acceptApplication,
-    rejectApplication,
-  };
+      this.receivedApplications.unshift({
+        id,
+        fromShelter: payload.fromShelter,
+        toShelter: payload.toShelter,
+        animalIds: payload.animalIds,
+        status: 'pending',
+        createdAt: now,
+      });
+    },
+
+    accept(id) {
+      const recv = this.receivedApplications.find((a) => a.id === id);
+      if (recv) recv.status = 'accepted';
+
+      const sent = this.sentApplications.find((a) => a.id === id);
+      if (sent) sent.status = 'accepted';
+    },
+
+    reject(id) {
+      const recv = this.receivedApplications.find((a) => a.id === id);
+      if (recv) recv.status = 'rejected';
+
+      const sent = this.sentApplications.find((a) => a.id === id);
+      if (sent) sent.status = 'rejected';
+    },
+
+    cancel(id) {
+      const sent = this.sentApplications.find((a) => a.id === id);
+      if (sent) sent.status = 'canceled';
+
+      const recv = this.receivedApplications.find((a) => a.id === id);
+      if (recv) recv.status = 'canceled';
+    },
+  },
 });
