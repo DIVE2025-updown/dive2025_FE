@@ -1,5 +1,8 @@
 <template>
   <div class="side-bar">
+    <button>
+      <i class="fa-solid fa-user"></i>
+    </button>
     <RouterLink class="btn" to="/map">Map</RouterLink>
     <RouterLink class="btn apply-link" to="/apply"
       >Apply
