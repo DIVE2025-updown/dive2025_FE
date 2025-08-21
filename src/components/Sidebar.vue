@@ -1,6 +1,6 @@
 <template>
   <div class="side-bar">
-    <button>
+    <button @click="showLogin = true" class="icon">
       <i class="fa-solid fa-user"></i>
     </button>
     <RouterLink class="btn" to="/map">Map</RouterLink>
@@ -13,12 +13,23 @@
     <RouterLink class="btn" to="/stats">Stats</RouterLink>
     <RouterLink class="btn" to="/mypage">Mypage</RouterLink>
   </div>
+
+  <LoginModal v-if="showLogin" @close="showLogin = false" @success="onLoginSuccess" />
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { useApplicationsStore } from '@/stores/applications';
+import LoginModal from '@/components/Login.vue';
 
 const applicationsStore = useApplicationsStore();
+
+const showLogin = ref(false);
+
+function onLoginSuccess(payload) {
+  console.log('성공', payload);
+  showLogin.value = false;
+}
 </script>
 
 <style scoped>
