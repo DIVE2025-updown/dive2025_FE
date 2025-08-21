@@ -4,7 +4,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import papa from 'papaparse';
+import { getAllShelters } from '@/api/shelter';
 import normalIcon from '@/assets/images/normal.png';
 import injuredIcon from '@/assets/images/injured.png';
 import emd from '@/assets/emd.json';
@@ -22,17 +22,25 @@ const props = defineProps({
 
 // 각 구역 색
 const colorMap = {
-  '중, 서, 영도, 북': '#800080', // 보라색
-  부산진: '#008000', // 초록색
-  '해운대, 수영, 동래, 남, 금정, 기장군': '#0000FF', // 파란색
-  연제: '#FF0000', // 빨간색
-  '사하, 강서, 사상': '#FFA500', // 주황색
-  동: '#4B0082', // 남색
+  부산동물보호센터: '#800080', // 보라색
+  동물보호관리협회: '#008000', // 초록색
+  '(사)동부동물보호협회': '#0000FF', // 파란색
+  청조동물병원: '#FF0000', // 빨간색
+  '(사)하얀비둘기': '#FFA500', // 주황색
+  동구종합동물병원: '#4B0082', // 남색
+};
+
+const usernameToDistricts = {
+  부산동물보호센터: ['중구', '서구', '영도구', '북구'],
+  동물보호관리협회: ['부산진구'],
+  '(사)동부동물보호협회': ['해운대구', '수영구', '동래구', '남구', '금정구', '기장군'],
+  청조동물병원: ['연제구'],
+  '(사)하얀비둘기': ['사하구', '강서구', '사상구'],
+  동구종합동물병원: ['동구'],
 };
 
 // 각 구역 그룹의 Polygon 객체를 저장할 객체
 const polygons = {};
-// 현재 하이라이트된 구역 그룹을 추적하기 위한 변수
 const activeDistrictGroup = ref(null);
 
 onMounted(() => {
@@ -55,6 +63,7 @@ onMounted(() => {
         isOpenInfo.close();
         isOpenInfo = null;
       }
+      highlightPolygon(null); // 클릭 시 하이라이트 해제
     });
 
     // 폴리곤 하이라이트 함수
@@ -76,76 +85,89 @@ onMounted(() => {
           const newColor = colorMap[groupName];
           polygon.setOptions({
             fillColor: newColor,
-            fillOpacity: 0.8, // 불투명하게 변경
+            fillOpacity: 0.8,
           });
         });
       }
       activeDistrictGroup.value = groupName;
     };
 
-    const fetchShelter = async () => {
+    const fetchShelters = async () => {
       try {
-        const response = await fetch('/shelters.csv');
-        const csvText = await response.text();
-        const parsedData = papa.parse(csvText, { header: true }).data;
-        const items = parsedData.filter((item) => item.careNm);
-        console.log('Shelter Items:', items);
+        const shelters = await getAllShelters();
 
-        // 폴리곤
-        const cityGroups = [...new Set(items.map((item) => item.city))];
-
+        // 폴리곤 렌더링 (username → 담당 구)
         emd.features.forEach((feature) => {
-          const districtName = feature.properties.SIG_KOR_NM;
-          cityGroups.forEach((cityGroup) => {
-            const districtsInGroup = cityGroup
-              .replace(/"/g, '')
-              .split(',')
-              .map((d) => d.trim() + (d.trim().endsWith('구') ? '' : '구'));
-            if (districtsInGroup.includes(districtName)) {
-              let coordinates;
-              if (feature.geometry.type === 'Polygon') {
-                coordinates = feature.geometry.coordinates;
-              } else if (feature.geometry.type === 'MultiPolygon') {
-                coordinates = feature.geometry.coordinates.flat();
-              }
+          const districtName = feature?.properties?.SIG_KOR_NM;
+          if (!districtName) return;
 
-              if (coordinates) {
-                coordinates.forEach((path) => {
-                  const polygonPath = path.map(
-                    (coord) => new naver.maps.LatLng(coord[1], coord[0])
-                  );
-                  const groupColor = colorMap[cityGroup] || '#FF0000';
+          Object.entries(usernameToDistricts).forEach(([username, districts]) => {
+            if (!Array.isArray(districts)) return;
+            if (!districts.includes(districtName)) return;
 
-                  const polygon = new naver.maps.Polygon({
-                    map: map,
-                    paths: polygonPath,
-                    fillColor: groupColor,
-                    fillOpacity: 0.3,
-                    strokeColor: groupColor,
-                    strokeOpacity: 0.2,
-                    strokeWeight: 1,
-                  });
-
-                  // Polygon 객체를 polygons 객체에 저장
-                  if (!polygons[cityGroup]) {
-                    polygons[cityGroup] = [];
-                  }
-                  polygons[cityGroup].push(polygon);
-                });
-              }
+            let coordinates = null;
+            if (feature.geometry.type === 'Polygon') {
+              coordinates = feature.geometry.coordinates;
+            } else if (feature.geometry.type === 'MultiPolygon') {
+              coordinates = feature.geometry.coordinates.flat();
             }
+
+            if (!coordinates) return;
+
+            coordinates.forEach((path) => {
+              const polygonPath = path.map((coord) => new naver.maps.LatLng(coord[1], coord[0]));
+              const groupColor = colorMap[username] || '#FF0000';
+
+              const polygon = new naver.maps.Polygon({
+                map: map,
+                paths: polygonPath,
+                fillColor: groupColor,
+                fillOpacity: 0.3,
+                strokeColor: groupColor,
+                strokeOpacity: 0.2,
+                strokeWeight: 1,
+              });
+
+              if (!polygons[username]) polygons[username] = [];
+              polygons[username].push(polygon);
+            });
           });
         });
 
-        // 마커
-        items.forEach((item) => {
-          let iconImage = injuredIcon;
-          if (item.careNm === '(사)유기동물 및 동물보호관리협회') {
-            iconImage = normalIcon;
-          }
+        // 마커 + 인포윈도우 렌더링
+        shelters.forEach((item) => {
+          const {
+            id,
+            username,
+            tel,
+            latitude,
+            longitude,
+            addr,
+            shelterFeature,
+            totalCapacity,
+            curCapacity,
+          } = item || {};
+
+          if (latitude == null || longitude == null) return;
+
+          const total = Number(totalCapacity) || 0;
+          const curr = Number(curCapacity) || 0;
+          const utilization = total > 0 ? Math.round((curr / total) * 100) : 0;
+
+          // 특징 라벨 가공(표시용)
+          const featureLabel = (() => {
+            const raw = String(shelterFeature ?? '').toUpperCase();
+            if (raw.includes('HOSPITAL')) return '병원 연계';
+            if (raw.includes('CLINIC')) return '동물병원';
+            if (raw.includes('CENTER')) return '보호센터';
+            if (raw.includes('VET')) return '수의사 상주';
+            return raw || '정보 없음';
+          })();
+
+          const iconImage = injuredIcon;
 
           const marker = new naver.maps.Marker({
-            position: new naver.maps.LatLng(item.lat, item.lng),
+            position: new naver.maps.LatLng(Number(latitude), Number(longitude)),
             map: map,
             icon: {
               url: iconImage,
@@ -153,49 +175,60 @@ onMounted(() => {
               origin: new naver.maps.Point(0, 2),
               anchor: new naver.maps.Point(27, 30),
             },
+            title: username,
           });
 
-          // info 창
+          // 인포윈도우
           const contentString = `
-             <div class="info-card">
-               <div class="info-header">
-                 <h4 class="care-name">${item.careNm}</h4>
-                 <div class="heart-container">
-                   <i class="fa-regular fa-heart"></i>
-                   <i class="fa-solid fa-heart heart-fill"></i>
-                   <span class="heart-text">70%</span>
-                 </div>
-               </div>
-               <div class="info-body">
-                 <p class="info-line">${item.careAddr}</p>
-                 <p class="info-line">전화번호: ${item.careTel}</p>
-                 <p class="info-line">수용현황: 7 / 10</p>
-               </div>
-             </div>
-           `;
+            <div class="info-card">
+              <div class="info-header">
+                <h4 class="care-name">${username ?? '보호소'}</h4>
+                <div class="heart-container">
+                  <i class="fa-regular fa-heart"></i>
+                  <i class="fa-solid fa-heart heart-fill" style="clip-path: inset(calc(100% - ${utilization}%) 0 0 0);"></i>
+                  <span class="heart-text">${utilization}%</span>
+                </div>
+              </div>
+              <div class="info-body">
+                <p class="info-line">${addr ?? '주소 정보 없음'}</p>
+                <p class="info-line">전화번호: ${tel ?? '미등록'}</p>
+                <p class="info-line">특징: ${featureLabel}</p>
+                <p class="info-line">수용현황: ${curr} / ${total}</p>
+              </div>
+            </div>
+          `;
 
+          // 인포윈도우 생성
           const infowindow = new naver.maps.InfoWindow({
             content: contentString,
             backgroundColor: 'transparent',
             borderColor: 'transparent',
             borderWidth: 0,
+            disableAnchor: false,
           });
 
-          // 마커 클릭 이벤트에 highlightPolygon 함수 연결
+          // 마커 클릭 시: 인포윈도우 토글 + 폴리곤 하이라이트(username 기준)
           naver.maps.Event.addListener(marker, 'click', () => {
             if (isOpenInfo) {
-              isOpenInfo.close();
               if (isOpenInfo === infowindow) {
+                isOpenInfo.close();
                 isOpenInfo = null;
-                // 동일한 마커를 다시 클릭하면 하이라이트 해제
-                if (activeDistrictGroup.value) {
-                  highlightPolygon(null);
-                }
+                highlightPolygon(null);
                 return;
+              } else {
+                isOpenInfo.close();
+                isOpenInfo = null;
               }
             }
-            highlightPolygon(item.city);
 
+            // username 기준 하이라이트 시도(매핑이 없으면 무시)
+            if (username && polygons[username]) {
+              highlightPolygon(username);
+            } else {
+              highlightPolygon(null);
+            }
+
+            // 인포윈도우 열기
             infowindow.open(map, marker);
             isOpenInfo = infowindow;
           });
@@ -205,7 +238,7 @@ onMounted(() => {
       }
     };
 
-    await fetchShelter();
+    await fetchShelters();
   };
 });
 </script>
