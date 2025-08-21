@@ -32,7 +32,7 @@
             </RouterLink>
         </nav>
 
-        <!-- 하단 (설정 / 로그아웃) -->
+        <!-- 하단 -->
         <div class="bottom-menu">
             <!-- 로그아웃 -->
             <button class="menu-item logout-btn" @click="handleLogout" v-if="auth.isAuthenticated">
@@ -41,20 +41,20 @@
             </button>
 
             <!-- 로그인 -->
-            <button class="menu-item login-btn" @click="showLogin = true" v-else>
+            <button class="menu-item login-btn" @click="auth.showLoginModal = true" v-else>
                 <i class="fa-solid fa-sign-in-alt menu-icon"></i>
                 <span>로그인</span>
             </button>
 
-            <!-- 설정 -->
-            <RouterLink class="menu-item" to="/settings">
-                <i class="fa-solid fa-cog menu-icon"></i>
-                <span>설정</span>
-            </RouterLink>
+            <!-- 설정 (주석 처리 중) -->
+            <!-- <RouterLink class="menu-item" to="/settings">
+        <i class="fa-solid fa-cog menu-icon"></i>
+        <span>설정</span>
+      </RouterLink> -->
         </div>
 
         <!-- 로그인 모달 -->
-        <LoginModal v-if="showLogin" @close="showLogin = false" @success="onLoginSuccess" />
+        <LoginModal v-if="auth.showLoginModal" @close="auth.showLoginModal = false" @success="onLoginSuccess" />
 
         <!-- 로그아웃 알림 모달 -->
         <div v-if="showLogoutModal" class="logout-modal">
@@ -79,17 +79,17 @@ import LoginModal from '@/components/Login.vue';
 const applicationsStore = useApplicationsStore();
 const auth = useAuthStore();
 
-const showLogin = ref(false);
 const showLogoutModal = ref(false);
 
 function handleLogout() {
     auth.logout();
+    auth.showLoginModal = false; // 로그인 모달 닫기
     showLogoutModal.value = true; // 로그아웃 모달 열기
 }
 
 function onLoginSuccess(payload) {
     console.log('로그인 성공:', payload);
-    showLogin.value = false;
+    auth.showLoginModal = false;
 }
 </script>
 
