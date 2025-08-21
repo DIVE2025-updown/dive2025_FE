@@ -1,23 +1,41 @@
 <template>
-    <div class="user-profile">
+    <!-- 로그인된 상태 -->
+    <div class="user-profile" v-if="auth.isAuthenticated">
         <img :src="user.imageUrl" alt="Profile" class="avatar" />
         <div class="user-info">
-            <span class="user-name">{{ user.name }}</span>
-            <span class="user-role">{{ user.role }}</span>
+            <span class="user-name">{{ auth.username }}</span>
+            <span class="user-role">{{ displayRole }}</span>
         </div>
-        <span class="dropdown-icon">⌄</span>
+    </div>
+
+    <!-- 비로그인 상태 -->
+    <div v-else class="user-profile">
+        <span class="login-link" @click="auth.showLoginModal = true">로그인</span>
+        <!-- 로그인 모달 -->
+        <LoginModal v-if="auth.showLoginModal" @close="auth.showLoginModal = false" @success="onLoginSuccess" />
     </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { computed } from 'vue';
+import { useAuthStore } from '@/stores/authStore';
+import LoginModal from '@/components/Login.vue';
 
-// 임시 유저 데이터 (나중에 store에서 가져오면 됨)
-const user = reactive({
-    name: '부산동물보호협회',
-    role: 'Shelter',
-    imageUrl: 'https://i.pravatar.cc/40', // 샘플 이미지 (랜덤 아바타)
+const auth = useAuthStore();
+
+const displayRole = computed(() => {
+    if (auth.stype === 'SHELTER') return '동물보호센터';
+    if (auth.stype === 'TRANSPORTER') return '운송자';
+    return '사용자';
 });
+
+const user = {
+    imageUrl: 'https://i.pravatar.cc/40',
+};
+
+function onLoginSuccess() {
+    auth.showLoginModal = false;
+}
 </script>
 
 <style scoped>
@@ -29,35 +47,34 @@ const user = reactive({
     padding: 6px 12px;
     border-radius: 20px;
     border: 1px solid #ddd;
-    cursor: pointer;
 }
-
 .avatar {
     width: 32px;
     height: 32px;
     border-radius: 50%;
     object-fit: cover;
 }
-
 .user-info {
     display: flex;
     flex-direction: column;
     line-height: 1.2;
 }
-
 .user-name {
     font-weight: bold;
     font-size: 14px;
     color: #333;
 }
-
 .user-role {
     font-size: 12px;
     color: #777;
 }
-
-.dropdown-icon {
+.login-link {
     font-size: 14px;
-    color: #555;
+    font-weight: 600;
+    color: #0ea5e9;
+    cursor: pointer;
+}
+.login-link:hover {
+    text-decoration: underline;
 }
 </style>
