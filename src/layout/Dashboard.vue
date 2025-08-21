@@ -27,7 +27,7 @@ import Header from '@/components/common/Header.vue'; // 추가
     display: flex;
     flex: 1;
     overflow: hidden;
-    margin-top: 50px; /* 헤더 높이만큼 여백 추가 */
+    margin-top: 60px; /* 헤더 높이만큼 여백 추가 */
 }
 
 .main-content {
