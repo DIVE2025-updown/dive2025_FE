@@ -41,6 +41,19 @@ export const cancelMySentRequest = async (id) => {
   return data;
 };
 
+// GET + querystring
+export const recommendTransporters = async (params) => {
+  // params 예: { fromShelterLatitude, toShelterLongitude }
+  const { data } = await api.get('/transport/recommend-transporter', { params });
+  return Array.isArray(data) ? data : [];
+};
+
+export const saveTransportRequest = async (payload) => {
+  // payload: { transferRequestId, transporterId, fromShelterId, toShelterId, message? }
+  const { data } = await api.post('/transport/save', payload);
+  return data;
+};
+
 export const fetchTprReceived = async (transporterId) => {
   // 예: await api.get('/tpr-request/inbox', { params: { transporterId } });
   return [];
