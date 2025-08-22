@@ -5,8 +5,8 @@
 <script setup>
 import { computed } from 'vue';
 import { useAuthStore } from '@/stores/authStore';
-import MyPageShelter from './MyPageShelter.vue';
-import MyPageTransporter from './MyPageTransporter.vue';
+import MyPageShelter from './ShelterPage.vue';
+import MyPageTransporter from './TransporterPage.vue';
 
 const auth = useAuthStore();
 
