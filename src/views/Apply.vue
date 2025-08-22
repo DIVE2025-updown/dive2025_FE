@@ -317,16 +317,25 @@ const closeModal = () => {
     isRightModalOpen.value = false;
 };
 
-const applyToShelterFromModal = (targetShelter) => {
+const applyToShelterFromModal = async (targetShelter) => {
+    const selectedAnimal = images.value.find((img) => img.id === selectedImage.value);
+    if (!selectedAnimal) return;
+
     const payload = {
-        fromShelter: currentShelterName.value,
-        toShelter: targetShelter.description, // careNm -> description 으로 변경
-        animalIds: [selectedImage.value],
+        rescuedId: selectedAnimal.id, // 동물 id
+        fromShelterId: auth.shelterId, // 로그인 보호소 id
+        toShelterId: targetShelter.id, // 모달에서 선택한 보호소 id
     };
-    applicationsStore.sendApplication(payload);
-    closeModal();
-    selectedImage.value = null;
-    console.log(`'${targetShelter.description}'로 이관 신청 완료`);
+
+    try {
+        await applicationsStore.sendApplication(payload, auth.shelterId);
+        console.log(`'${targetShelter.description}'로 이관 신청 완료`);
+    } catch (err) {
+        console.error('이관 신청 실패:', err);
+    } finally {
+        closeModal();
+        selectedImage.value = null;
+    }
 };
 
 // ✅ 이미지 fallback
@@ -337,6 +346,7 @@ const onImgError = (e) => {
 // 최초 로드
 onMounted(() => {
     loadTransferCandidates();
+    applicationsStore.fetchSentRequests(auth.shelterId);
 });
 </script>
 
