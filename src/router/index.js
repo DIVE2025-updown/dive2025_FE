@@ -5,6 +5,7 @@ import Apply from '@/views/Apply.vue';
 import Stats from '@/views/Stats.vue';
 import Mypage from '@/views/Mypage.vue';
 import Landing from '@/views/Landing.vue';
+import Apply2 from '@/views/Apply2.vue';
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
@@ -40,6 +41,11 @@ const router = createRouter({
                     path: 'landing',
                     name: 'landing',
                     component: Landing,
+                },
+                {
+                    path: 'apply2',
+                    name: 'apply2',
+                    component: Apply2,
                 },
             ],
         },

@@ -1,4 +1,5 @@
 import api from './api';
+import qs from 'qs';
 
 // ====================== 전체 보호소 관련 ======================
 
@@ -34,4 +35,10 @@ export const fetchMyAnimalsGrouped = () => api.get('/rescued/myAnimalList/care-r
 // ====================== 이관 후보 조회 ======================
 
 // 이관 후보 동물 조회
-export const fetchTransferCandidates = (params) => api.get('/rescued/transfer-candidates', { params });
+// export const fetchTransferCandidates = (params) => api.get('/rescued/transfer-candidates', { params });
+export const fetchTransferCandidates = (params) => {
+    return api.get('/rescued/transfer-candidates', {
+        params,
+        paramsSerializer: (p) => qs.stringify(p, { arrayFormat: 'repeat' }),
+    });
+};
