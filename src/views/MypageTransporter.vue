@@ -8,7 +8,6 @@
     <div v-if="loading" class="loading">불러오는 중...</div>
 
     <div class="stack" v-else>
-      <!-- 받은 접수(운송 의뢰가 내게 들어온 것) -->
       <section class="card">
         <h3 class="title">접수 내역</h3>
         <div v-if="received.length === 0" class="empty">받은 접수가 없습니다.</div>
@@ -21,7 +20,6 @@
               <small>상태: {{ app.requestStatus }}</small>
             </div>
 
-            <!-- 운송쪽 액션은 나중에 정의 -->
             <div class="actions" v-if="false">
               <button class="btn primary">수락</button>
               <button class="btn danger">거절</button>
@@ -30,7 +28,6 @@
         </ul>
       </section>
 
-      <!-- 보낸 신청(내가 타 운송사/보호소로 보낸 의뢰) -->
       <section class="card">
         <h3 class="title">신청 내역</h3>
         <div v-if="sent.length === 0" class="empty">보낸 신청이 없습니다.</div>
@@ -48,7 +45,6 @@
               </div>
             </div>
 
-            <!-- 운송쪽 취소/변경은 나중에 정의 -->
             <div class="actions" v-if="false">
               <button class="btn danger">취소하기</button>
             </div>
@@ -99,7 +95,6 @@ onMounted(refresh);
 </script>
 
 <style scoped>
-/* Shelter와 같은 스타일 사용 */
 .mypage {
   max-width: 100%;
   margin: 0 auto;

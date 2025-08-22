@@ -55,12 +55,20 @@
               </div>
             </div>
 
-            <!-- 보낸 항목 취소 -->
-            <div class="actions" v-if="app.requestStatus === 'PENDING_TARGET'">
-              <span class="status">신청중</span>
-              <button class="btn danger" :disabled="busy.has(app.id)" @click="onCancel(app)">
-                취소하기
-              </button>
+            <!-- 보낸 항목 액션 -->
+            <div class="actions">
+              <!-- 대기중이면 취소 -->
+              <template v-if="app.requestStatus === 'PENDING_TARGET'">
+                <span class="status">신청중</span>
+                <button class="btn danger" :disabled="busy.has(app.id)" @click="onCancel(app)">
+                  취소하기
+                </button>
+              </template>
+
+              <!-- 타겟 수락되면 운송자 지정 버튼 -->
+              <template v-else-if="app.requestStatus === 'TARGET_ACCEPTED'">
+                <button class="btn primary" @click="openTprModal(app)">운송자 지정</button>
+              </template>
             </div>
           </li>
         </ul>
@@ -99,17 +107,52 @@
         </div>
       </div>
     </div>
+
+    <!-- 우측 슬라이드 모달: 추천 운송자 목록 -->
+    <RightModal v-if="isRightModalOpen" title="운송자 선택" @close="closeModal">
+      <!-- 로딩 중 -->
+      <div v-if="isLoadingTprs" class="loading-container">
+        <div class="loading-spinner">추천 운송자를 찾는 중...</div>
+      </div>
+
+      <!-- 운송자 목록 -->
+      <div v-else class="shelter-list in-modal">
+        <div v-if="recommendedTransporters.length === 0" class="no-shelters">
+          추천 가능한 운송자가 없습니다.
+        </div>
+
+        <div v-else class="shelter-item" v-for="tpr in recommendedTransporters" :key="tpr.id">
+          <div class="shelter-info">
+            <strong>{{ tpr.storeName }}</strong>
+            <small>{{ tpr.tel }} · {{ tpr.addr }}</small>
+            <small>거리: {{ (tpr.distance ?? 0).toFixed(1) }}km</small>
+          </div>
+          <div class="button-group">
+            <button
+              class="apply-button"
+              :disabled="applyBusy"
+              @click="applyToTransporterFromModal(tpr)"
+            >
+              신청
+            </button>
+          </div>
+        </div>
+      </div>
+    </RightModal>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import RightModal from '@/components/RightModal.vue';
 import {
   fetchFromShelter,
   fetchToShelter,
   acceptTarget,
   rejectTarget,
   cancelMySentRequest,
+  recommendTransporters,
+  saveTransportRequest,
 } from '@/api/request';
 
 const received = ref([]);
@@ -119,7 +162,6 @@ const loading = ref(false);
 const errorMsg = ref('');
 const busy = ref(new Set());
 
-// 거절 모달 상태
 const rejectModal = ref({
   open: false,
   trRequestId: null,
@@ -128,6 +170,12 @@ const rejectModal = ref({
 });
 const rejectBusy = ref(false);
 const canSubmitReject = computed(() => (rejectModal.value.message || '').trim().length > 0);
+
+const isRightModalOpen = ref(false);
+const isLoadingTprs = ref(false);
+const recommendedTransporters = ref([]);
+const selectedApp = ref(null);
+const applyBusy = ref(false);
 
 const getShelterIdFromStorage = () => {
   const raw = localStorage.getItem('auth:data');
@@ -163,7 +211,7 @@ const refresh = async () => {
   }
 };
 
-// Set의 반응성 보장을 위해 새 Set 재할당
+// Set 반응성 보장
 const lock = (id) => {
   const next = new Set(busy.value);
   next.add(id);
@@ -189,26 +237,22 @@ const onAccept = async (app) => {
   }
 };
 
-// --- 거절 모달 흐름 ---
 const openRejectModal = (app) => {
   rejectModal.value.open = true;
   rejectModal.value.trRequestId = app.id;
   rejectModal.value.targetName = app.fromShelterName || app.fromShelterId || '';
   rejectModal.value.message = '';
-  // 포커스 활성 위해
   setTimeout(() => {
     const backdrop = document.querySelector('.modal-backdrop');
     backdrop && backdrop.focus();
   }, 0);
 };
-
 const closeRejectModal = () => {
   rejectModal.value.open = false;
   rejectModal.value.trRequestId = null;
   rejectModal.value.targetName = '';
   rejectModal.value.message = '';
 };
-
 const submitReject = async () => {
   if (!rejectModal.value.trRequestId) return;
   if (!canSubmitReject.value) {
@@ -224,11 +268,10 @@ const submitReject = async () => {
     alert('거절 처리에 실패했습니다.');
   } finally {
     rejectBusy.value = false;
-    closeRejectModal(); // busy 해제 후 닫기
+    closeRejectModal();
   }
 };
 
-// 보낸 신청 취소
 const onCancel = async (app) => {
   if (!confirm('보낸 신청을 취소하시겠습니까?')) return;
   lock(app.id);
@@ -240,6 +283,61 @@ const onCancel = async (app) => {
     alert('취소 처리에 실패했습니다.');
   } finally {
     unlock(app.id);
+  }
+};
+
+const openTprModal = async (app) => {
+  selectedApp.value = app;
+  isRightModalOpen.value = true;
+  isLoadingTprs.value = true;
+  recommendedTransporters.value = [];
+
+  try {
+    const params = {
+      fromShelterLatitude: app.fromShelterLatitude,
+      fromShelterLongitude: app.fromShelterLongitude,
+    };
+    const list = await recommendTransporters(params);
+    recommendedTransporters.value = Array.isArray(list) ? list : [];
+  } catch (e) {
+    console.error('[recommendTransporters error]', e);
+    recommendedTransporters.value = [];
+  } finally {
+    isLoadingTprs.value = false;
+  }
+};
+
+const closeModal = () => {
+  isRightModalOpen.value = false;
+  isLoadingTprs.value = false;
+  selectedApp.value = null;
+  recommendedTransporters.value = [];
+  applyBusy.value = false;
+};
+
+const applyToTransporterFromModal = async (tpr) => {
+  if (!selectedApp.value) return;
+  if (!confirm(`'${tpr.storeName}'에게 운송을 신청하시겠습니까?`)) return;
+
+  applyBusy.value = true;
+  try {
+    const payload = {
+      transferRequestId: selectedApp.value.id,
+      transporterId: tpr.id,
+      fromShelterId: getShelterIdFromStorage(),
+      message: '',
+    };
+    Object.keys(payload).forEach((k) => payload[k] == null && delete payload[k]);
+
+    await saveTransportRequest(payload);
+    closeModal();
+    await refresh();
+    alert('운송자에게 신청을 보냈습니다.');
+  } catch (e) {
+    console.error('[saveTransportRequest error]', e);
+    alert('운송자 신청에 실패했습니다.');
+  } finally {
+    applyBusy.value = false;
   }
 };
 
@@ -352,38 +450,38 @@ onMounted(refresh);
   word-break: break-word;
 }
 
-/* Modal */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: grid;
-  place-items: center;
-  z-index: 50;
-  outline: none;
+.loading-container {
+  padding: 12px;
 }
-.modal {
-  width: min(640px, 92vw);
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  padding: 16px;
+.loading-spinner {
+  color: #444;
 }
-.modal-title {
-  margin: 0 0 8px;
+.no-shelters {
+  color: #666;
+  padding: 8px 2px;
 }
-.modal-textarea {
-  width: 100%;
-  resize: vertical;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fafafa;
-}
-.modal-actions {
+.shelter-item {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 8px;
-  margin-top: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.shelter-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.apply-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
 }
 </style>
