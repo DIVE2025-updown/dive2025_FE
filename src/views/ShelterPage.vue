@@ -144,6 +144,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { useApplicationsStore } from '@/stores/applications';
 import RightModal from '@/components/RightModal.vue';
 import {
   fetchFromShelter,
@@ -154,6 +155,9 @@ import {
   recommendTransporters,
   saveTransportRequest,
 } from '@/api/request';
+
+const applicationsStore = useApplicationsStore();
+applicationsStore.init();
 
 const received = ref([]);
 const sent = ref([]);
@@ -317,6 +321,21 @@ const closeModal = () => {
 
 const applyToTransporterFromModal = async (tpr) => {
   if (!selectedApp.value) return;
+
+  const meta = applicationsStore.getMetaByRescuedId(selectedApp.value.rescuedId);
+  const fromShelterId = getShelterIdFromStorage();
+  const toShelterId = meta?.toShelterId || null;
+
+  if (!fromShelterId) {
+    alert('보호소 ID를 찾을 수 없습니다.');
+    return;
+  }
+
+  if (!toShelterId) {
+    alert('대상 보호소 ID를 찾을 수 없습니다.');
+    return;
+  }
+
   if (!confirm(`'${tpr.storeName}'에게 운송을 신청하시겠습니까?`)) return;
 
   applyBusy.value = true;
@@ -324,7 +343,8 @@ const applyToTransporterFromModal = async (tpr) => {
     const payload = {
       transferRequestId: selectedApp.value.id,
       transporterId: tpr.id,
-      fromShelterId: getShelterIdFromStorage(),
+      fromShelterId,
+      toShelterId,
       message: '',
     };
     Object.keys(payload).forEach((k) => payload[k] == null && delete payload[k]);
@@ -483,5 +503,39 @@ onMounted(refresh);
   background: #2563eb;
   color: #fff;
   cursor: pointer;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 100; /* RightModal 위로 */
+  outline: none;
+}
+.modal {
+  width: min(640px, 92vw);
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+.modal-title {
+  margin: 0 0 8px 0;
+}
+.modal-textarea {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  resize: vertical;
+  font: inherit;
+  min-height: 120px;
+}
+.modal-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 </style>

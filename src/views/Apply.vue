@@ -31,7 +31,16 @@
                     </transition>
                 </div>
 
-                <button class="filter-apply" @click="openModal" :disabled="!selectedImage">이관 신청</button>
+                <!-- 필터바 -->
+                <button
+                    class="filter-apply-cancel"
+                    v-if="selectedImage && applicationMap[selectedImage]"
+                    @click="applicationsStore.cancelApplication(applicationMap[selectedImage].id, auth.shelterId)"
+                >
+                    이관 취소
+                </button>
+
+                <button class="filter-apply" v-else @click="openModal" :disabled="!selectedImage">이관 신청</button>
             </div>
         </div>
 
@@ -58,16 +67,19 @@
                     </div>
                 </transition>
                 <!-- 동물 리스트 상단 -->
-                <span class="animals-header">이관 대상 동물 {{ images.length }}마리</span>
+                <span class="animals-header" v-html="headerText"></span>
 
                 <!-- 이미지 리스트 -->
                 <div class="image-list" @scroll.passive="handleScroll">
-                    <div class="image-item" v-for="image in images" :key="image.id" :class="{ 'is-selected': isSelected(image.id) }" @click="toggleSelect(image.id)">
+                    <div class="image-item" v-for="image in images" :key="image.id">
                         <!-- 이미지 감싸는 wrapper -->
-                        <div class="image-wrapper">
+                        <div class="image-wrapper" :class="{ 'is-selected': isSelected(image.id) }" @click="toggleSelect(image.id)">
                             <img :src="image.imgUrl" loading="lazy" alt="동물 사진" @error="onImgError($event)" />
                             <div class="overlay"></div>
-                            <div class="danger-tag-container" v-if="image.needsTransfer">위험 동물</div>
+                            <div class="tag-container" :class="applicationMap[image.id] ? 'transfer-tag' : 'danger-tag'" v-if="image.needsTransfer || applicationMap[image.id]">
+                                {{ applicationMap[image.id] ? '이관 신청됨' : '위험 동물' }}
+                            </div>
+
                             <div class="checkbox-container">
                                 <i v-if="isSelected(image.id)" class="fa-solid fa-circle-check checkbox-icon is-selected"></i>
                                 <i v-else class="fa-regular fa-circle checkbox-icon"></i>
@@ -75,9 +87,18 @@
                         </div>
 
                         <!-- 이미지 밑에 나오는 정보 -->
+                        <!-- 기존 info-box 교체 -->
                         <div class="info-box">
-                            <p class="animal-shelter">{{ image.careNm }}</p>
-                            <p class="animal-id">#{{ image.id }}</p>
+                            <div class="meta-top">
+                                <!-- 컨디션 Pill (선택적) -->
+                                <span class="cond-pill" :class="conditionClass(image.animalCondition)">
+                                    {{ conditionLabel(image.animalCondition) }}
+                                </span>
+                            </div>
+
+                            <p class="meta-line id-line">공고번호 {{ image.desertionNo }}</p>
+                            <p class="meta-line sub-line">{{ image.age }} · {{ image.weight }}</p>
+                            <p class="meta-line day-line">보호 {{ image.daysProtected ?? daysSince(image.rescueDate) }}일째</p>
                         </div>
                     </div>
 
@@ -135,6 +156,7 @@ import { fetchTransferCandidates } from '@/api/rescued';
 import { getShelterPriority } from '@/api/shelter';
 import { useAuthStore } from '@/stores/authStore';
 import { filter } from 'lodash';
+import { faWeight } from '@fortawesome/free-solid-svg-icons';
 
 const auth = useAuthStore();
 const isFilterOpen = ref(false);
@@ -164,6 +186,68 @@ const filters = ref({
     order: 'desc',
 });
 
+const headerText = computed(() => {
+    const shelter = currentShelterName.value || '';
+    const count = images.value.length;
+
+    if (count === 0) {
+        return '조건에 맞는 동물이 없습니다 🐾';
+    }
+
+    const conds = filters.value.conditions.map((c) => {
+        if (c === 'NORMAL') return '<span class="cond-normal">정상</span>';
+        if (c === 'MILD') return '<span class="cond-mild-text">경증</span>';
+        if (c === 'SEVERE') return '<span class="cond-severe-text">중증</span>';
+        return c;
+    });
+    const condText = conds.length > 0 ? conds.join(', ') : '';
+
+    let periodText = '';
+    if (filters.value.usePeriod) {
+        if (filters.value.dueWithinDays === 0) periodText = '<span class="period-overdue">보호기간 경과</span>';
+        else if (filters.value.dueWithinDays === 3) periodText = '<span class="period-soon">보호기간 3일 이내</span>';
+    }
+
+    let criteria = '';
+    if (condText && periodText) criteria = `${condText} · ${periodText}`;
+    else if (condText) criteria = condText;
+    else if (periodText) criteria = periodText;
+
+    if (criteria) {
+        return `현재 ${shelter}의 ${criteria} 동물 : <strong>${count}마리</strong>`;
+    } else {
+        return `현재 ${shelter}의 이관 대상 동물 : <strong>${count}마리</strong>`;
+    }
+});
+
+// 컨디션 라벨 / 클래스
+// 컨디션 라벨 / 클래스
+const conditionLabel = (c) => {
+    switch (c) {
+        case 'NORMAL':
+            return '정상';
+        case 'MILD':
+            return '조금 아파요';
+        case 'SEVERE':
+            return '많이 아파요';
+        default:
+            return '';
+    }
+};
+
+const conditionClass = (c) => {
+    switch (c) {
+        case 'NORMAL':
+            return 'cond-normal';
+        case 'MILD':
+            return 'cond-mild';
+        case 'SEVERE':
+            return 'cond-severe';
+        default:
+            return 'cond-etc';
+    }
+};
+
 // ---------------------- API 호출 ----------------------
 const loadTransferCandidates = async () => {
     if (isLoading.value || !hasMore.value) return;
@@ -190,6 +274,11 @@ const loadTransferCandidates = async () => {
             careNm: animal.shelterName,
             needsTransfer: animal.needsTransfer,
             animalCondition: animal.animalCondition,
+            desertionNo: animal.desertionNo,
+            age: animal.age,
+            weight: animal.weight,
+            daysProtected: animal.daysProtected,
+            rescueDate: animal.rescueDate,
             latitude: animal.latitude,
             longitude: animal.longitude,
         }));
@@ -343,6 +432,14 @@ const onImgError = (e) => {
     e.target.src = '/fallback.jpg';
 };
 
+const applicationMap = computed(() => {
+    const map = {};
+    applicationsStore.sentRequests.forEach((req) => {
+        map[req.rescuedId] = req.id; // rescuedId → transferRequestId
+    });
+    return map;
+});
+
 // 최초 로드
 onMounted(() => {
     loadTransferCandidates();
@@ -419,6 +516,20 @@ onMounted(() => {
 
 .filter-apply {
     background: #ff385c;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    margin-right: 20px;
+}
+
+.filter-apply-cancel {
+    background: #1d4ed8;
     color: #fff;
     border: none;
     border-radius: 20px;
@@ -525,17 +636,7 @@ onMounted(() => {
 }
 
 /* 동물 카드 그리드 */
-/* 동물 카드 */
-.image-item {
-    display: flex;
-    flex-direction: column;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease;
-    cursor: pointer;
-}
+
 .image-list {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -543,37 +644,9 @@ onMounted(() => {
     overflow-y: auto;
     flex-grow: 1;
     padding: 10px; /* ✅ padding 보정 */
-    /* margin-top: 8px; */
+    position: relative; /* ✅ position relative 추가 */
 }
-.image-item {
-    position: relative;
-    width: 100%;
-    padding-top: 100%;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    border-radius: 12px;
-    background: #fff;
-    cursor: pointer;
-}
-.image-item img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-.image-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
-}
-.image-item:hover img {
-    transform: scale(1.05);
-}
+
 /* ✅ 선택 시 box-shadow 강조만 */
 .image-item.is-selected {
     box-shadow: 0 0 0 3px #4caf50, 0 6px 16px rgba(0, 0, 0, 0.2);
@@ -581,29 +654,50 @@ onMounted(() => {
 }
 .overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.15);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.12);
     opacity: 0;
     transition: opacity 0.3s ease;
+    z-index: 1; /* ⬅️ overlay는 아래 */
+    pointer-events: none; /* ⬅️ 이벤트 차단 */
 }
-.image-item:hover .overlay {
-    opacity: 1;
-}
-.danger-tag-container {
+
+.checkbox-container {
     position: absolute;
+    z-index: 2; /* ⬅️ overlay보다 높게 */
+}
+
+/* 공통 배지 스타일 (위치 + 공통 모양) */
+.tag-container {
+    position: absolute;
+    z-index: 2;
     top: 6px;
     left: 6px;
-    background-color: #ff4d4f;
-    color: #fff;
     padding: 4px 10px;
     border-radius: 20px;
     font-size: 12px;
     font-weight: bold;
+    color: #fff;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
+
+/* 위험 동물 (빨강) */
+.danger-tag {
+    background-color: #ff4d4f;
+}
+
+/* 이관 신청됨 (파랑) */
+.transfer-tag {
+    background-color: #1d4ed8;
+}
+
+.image-wrapper:hover .overlay {
+    opacity: 1;
+}
+.image-item:hover .overlay {
+    opacity: 1;
+}
+
 .checkbox-container {
     position: absolute;
     top: 8px;
@@ -645,7 +739,7 @@ onMounted(() => {
     align-items: center;
     gap: 8px;
     box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
-    z-index: 10;
+    z-index: 50;
 }
 
 /* 애니메이션 */
@@ -665,12 +759,9 @@ onMounted(() => {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin: 4px 0; /* 위아래 여백 최소화 */
-    margin-left: 15px; /* 왼쪽만 살짝 띄우기 */
+    margin: -10px 0 22px 10px; /* 위는 0, 아래는 살짝만 */
     min-height: 20px;
-    /* margin-top: 10px; */
-    margin-bottom: 8px;
-    padding: 8px 0; /* 위아래 패딩 추가 */
+    padding: 0; /* 패딩 제거 */
 }
 
 .chip {
@@ -822,5 +913,145 @@ onMounted(() => {
     background: #e0324a;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(224, 50, 74, 0.2);
+}
+
+.image-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* 사진과 텍스트 사이 여백 */
+    background: transparent; /* 카드 배경 제거 */
+    box-shadow: none; /* 카드 그림자 제거 */
+    border-radius: 0; /* 라운드 제거 */
+    overflow: visible;
+}
+/* ✅ 사진 영역 (2/3 비율) */
+.image-wrapper {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08); /* 기본 그림자 */
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+    /* 모던 브라우저용 비율 고정 (Airbnb 느낌) */
+    aspect-ratio: 1 / 1; /* 필요에 따라 3/2, 1/1로 조정 */
+}
+
+.image-wrapper img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+.image-wrapper:hover img {
+    transform: scale(1.03);
+}
+.image-wrapper.is-selected {
+    box-shadow: 0 0 0 3px #4caf50, 0 8px 22px rgba(0, 0, 0, 0.14);
+}
+
+/* ✅ 사진에만 hover 효과 */
+.image-wrapper:hover {
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14); /* hover 시 사진만 강조 */
+    transform: translateY(-2px);
+}
+
+/* ✅ 정보 영역 (1/3 비율) */
+.info-box {
+    padding: 0 2px; /* 살짝 좌우 여백만 */
+    background: transparent; /* 배경 제거 */
+    border-top: none; /* 테두리 제거 */
+    text-align: left; /* Airbnb 느낌은 좌측 정렬 */
+}
+
+.animal-shelter {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+    line-height: 1.25;
+}
+
+.animal-id {
+    margin: 0;
+    font-size: 13px;
+    color: #717171; /* 연한 회색 */
+}
+
+.meta-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.meta-line {
+    margin: 0;
+    line-height: 1.35;
+}
+
+.id-line {
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+}
+
+.sub-line {
+    font-size: 13px;
+    color: #555;
+}
+
+.day-line {
+    font-size: 13px;
+    color: #717171;
+}
+
+/* 컨디션 Pill */
+.cond-pill {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* ✅ 헤더 텍스트 색상 전용 */
+.cond-mild-text {
+    color: #f57f17; /* 노란-주황 */
+    font-weight: 600;
+}
+
+.cond-severe-text {
+    color: #c62828; /* 진한 빨강 */
+    font-weight: 600;
+}
+
+.cond-etc {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+}
+
+.id-line,
+.sub-line {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cond-normal {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+.cond-mild {
+    background: #fff8e1; /* 연한 노란색 배경 */
+    color: #f57f17; /* 진한 노란-주황 텍스트 */
+    border: 1px solid #ffe082; /* 옅은 노란색 테두리 */
+}
+.cond-severe {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
 }
 </style>
