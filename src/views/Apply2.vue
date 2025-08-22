@@ -450,24 +450,24 @@ onMounted(() => {
 <style scoped>
 .main-container {
     width: 100%;
-    height: 100vh;
+    height: calc(100vh - 60px); /* 헤더 높이 제외 */
     display: flex;
     flex-direction: column;
     background: #f8f9fa;
-    /* 사이드바가 있는 경우를 고려한 여백 */
-    overflow: hidden; /* 바깥 스크롤 방지 */
+    margin-left: 0;
 }
 
-/* ✅ 상단 필터바 - 사이드바 고려한 전체 너비 */
+/* ✅ 필터바 높이 고정 */
 .top-filter-bar {
-    width: 100%-220px;
+    width: 100%;
     background: #fff;
     padding: 12px 15px;
     border-bottom: 1px solid #ddd;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     z-index: 20;
-    height: 35px;
-    flex-shrink: 0;
+    height: 59px; /* 패딩 포함한 실제 높이 */
+    box-sizing: border-box;
+    flex-shrink: 0; /* 크기 고정 */
 }
 
 .filter-content {
@@ -594,40 +594,37 @@ onMounted(() => {
     display: flex;
     min-height: 0;
     background: #fff;
-    gap: 20px; /* 리스트와 지도 사이 여백 */
-    padding: 16px; /* 전체 안쪽 여백 */
+    gap: 20px;
+    padding: 16px;
     box-sizing: border-box;
-    overflow: hidden; /* 바깥 스크롤 방지 */
+    height: calc(100% - 59px); /* 필터바 높이 제외 */
 }
 
 .animals-header {
-    font-size: 15px; /* 글자 크기 */
-    font-weight: 500; /* 굵기 */
-    color: #666; /* 색상 */
-    margin-left: 8px; /* 좌측 여백 */
-    margin-bottom: 5px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #666;
+    margin: 8px 8px 8px 8px; /* 여백 최적화 */
+    flex-shrink: 0; /* 크기 고정 */
 }
 
 /* 왼쪽 동물 리스트 영역 */
 .animals-container {
     flex: 1.1;
     width: 600px;
-    min-height: 0;
     height: 100%;
-    /* background: #f8f9fa; */
     background: #fff;
     display: flex;
     flex-direction: column;
     position: relative;
-    margin: 10px; /* 상단 여백 */
+    margin: 0; /* 불필요한 마진 제거 */
 }
 
 /* 오른쪽 지도 영역 */
 .map-container {
     flex: 0.9;
     height: 100%;
-    margin: 16px;
-    margin-left: 0; /* 왼쪽 여백 제거 */
+    margin: 0; /* 불필요한 마진 제거 */
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -646,9 +643,10 @@ onMounted(() => {
     gap: 20px;
     overflow-y: auto;
     flex-grow: 1;
-    padding: 10px; /* ✅ padding 보정 */
-    position: relative; /* ✅ position relative 추가 */
-    min-height: 0;
+    padding: 10px;
+    position: relative;
+    height: 0; /* flex-grow로 높이 결정되도록 */
+    min-height: 200px; /* 최소 높이 보장 */
 }
 
 /* ✅ 선택 시 box-shadow 강조만 */
@@ -763,9 +761,10 @@ onMounted(() => {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin: -10px 0 22px 10px; /* 위는 0, 아래는 살짝만 */
-    min-height: 20px;
-    padding: 0; /* 패딩 제거 */
+    margin: 0 0 16px 10px; /* 마진 최적화 */
+    min-height: 0; /* 내용이 없을 때 높이 0 */
+    padding: 0;
+    flex-shrink: 0; /* 크기 고정 */
 }
 
 .chip {
