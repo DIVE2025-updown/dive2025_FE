@@ -83,4 +83,9 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,windows,visualstudiocode
 
+# 환경변수 파일 무시
 .env
+.env.development
+.env.production
+.env.local
+.env.*.local
