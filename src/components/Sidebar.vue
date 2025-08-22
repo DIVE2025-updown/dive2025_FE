@@ -111,9 +111,11 @@ function onLoginSuccess(payload) {
     gap: 8px;
     font-weight: 700;
     font-size: 18px;
-    padding: 20px;
+    height: 60px;
+    padding: 0 20px;
     border-bottom: 1px solid #eee;
     color: #0ea5e9;
+    box-sizing: border-box;
 }
 .logo-icon {
     font-size: 20px;
