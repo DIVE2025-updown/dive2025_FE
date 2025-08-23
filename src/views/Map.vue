@@ -14,8 +14,8 @@ const props = defineProps({
   centerCoords: {
     type: Object,
     default: () => ({
-      lat: 35.154914,
-      lng: 129.012,
+      lat: 35.1895543,
+      lng: 129.0606416,
     }),
   },
 });
