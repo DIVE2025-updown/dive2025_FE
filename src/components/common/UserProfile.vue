@@ -1,7 +1,7 @@
 <template>
     <!-- 로그인된 상태 -->
     <div class="user-profile" v-if="auth.isAuthenticated">
-        <img :src="user.imageUrl" alt="Profile" class="avatar" />
+        <img :src="avatarUrl" :alt="displayRole" class="avatar" />
         <div class="user-info">
             <span class="user-name">{{ auth.username }}</span>
             <span class="user-role">{{ displayRole }}</span>
@@ -29,9 +29,18 @@ const displayRole = computed(() => {
     return '사용자';
 });
 
-const user = {
-    imageUrl: 'https://i.pravatar.cc/40',
-};
+/** 역할별 기본 아바타(원하면 경로만 바꿔) */
+const shelterAvatar = new URL('@/assets/images/Shelter.png', import.meta.url).href;
+const transporterAvatar = new URL('@/assets/images/Transporter.png', import.meta.url).href;
+const defaultAvatar = 'https://i.pravatar.cc/40';
+
+/** 실제 표시할 아바타: 사용자 업로드 > 역할별 기본 > 디폴트 */
+const avatarUrl = computed(() => {
+    if (auth.profileImageUrl) return auth.profileImageUrl;
+    if (auth.stype === 'SHELTER') return shelterAvatar;
+    if (auth.stype === 'TRANSPORTER') return transporterAvatar;
+    return defaultAvatar;
+});
 
 function onLoginSuccess() {
     auth.showLoginModal = false;
