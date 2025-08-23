@@ -67,7 +67,7 @@
                     <span class="reason-text">{{ (app.message || '').trim() || '사유 없음' }}</span>
                   </div>
                 </td>
-                <td data-label="created_at">{{ app.createdAt }}</td>
+                <td data-label="created_at">{{ formatDate(app.updatedAt) }}</td>
               </tr>
             </tbody>
           </table>
@@ -115,6 +115,25 @@ const received = ref([]);
 const loading = ref(false);
 const errorMsg = ref('');
 const busy = ref(new Set());
+
+const formatDate = (date) => {
+  let year = String(date[0]);
+  if (year.length === 1) year = '0' + year;
+
+  let month = String(date[1]);
+  if (month.length === 1) month = '0' + month;
+
+  let day = String(date[2]);
+  if (day.length === 1) day = '0' + day;
+
+  let hour = String(date[3]);
+  if (hour.length === 1) hour = '0' + hour;
+
+  let minute = String(date[4]);
+  if (minute.length === 1) minute = '0' + minute;
+
+  return `${year}-${month}-${day} ${hour}:${minute}`;
+};
 
 // 거절 모달 상태
 const rejectModal = ref({
@@ -311,7 +330,7 @@ onMounted(refresh);
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 16px;
 }
 .table thead th {
   text-align: left;
@@ -324,6 +343,7 @@ onMounted(refresh);
   padding: 10px 12px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  height: 50px;
 }
 .table tbody tr:hover {
   background: #f8fafc;
@@ -334,7 +354,7 @@ onMounted(refresh);
   display: inline-block;
   padding: 3px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 700;
   border: 1px solid transparent;
 }
@@ -374,7 +394,7 @@ onMounted(refresh);
 }
 .badge.tiny {
   padding: 2px 6px;
-  font-size: 11px;
+  font-size: 14px;
   border-radius: 6px;
   background: #dc2626;
   color: #fff;

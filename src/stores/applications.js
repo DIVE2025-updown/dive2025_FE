@@ -1,10 +1,13 @@
 // stores/applications.js
 import { defineStore } from 'pinia';
+import { ref } from 'vue';
 import {
   saveTransferRequest,
   deleteTransferRequest,
   getRequestsFromShelter,
 } from '@/api/tr-request';
+
+export const hoveredShelterId = ref(null);
 
 export const useApplicationsStore = defineStore('applications', {
   state: () => ({

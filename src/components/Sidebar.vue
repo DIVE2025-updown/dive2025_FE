@@ -109,7 +109,7 @@ function onLoginSuccess(payload) {
 
 <style scoped>
 .sidebar {
-  width: 220px;
+  width: 200px;
   background: #fff;
   border-right: 1px solid #eee;
   height: calc(100vh - 60px); /* 헤더 높이 제외 */

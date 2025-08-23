@@ -3,13 +3,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { getAllShelters } from '@/api/shelter';
+import { hoveredShelterId } from '@/stores/applications';
 import normalIcon from '@/assets/images/normal.png';
 import injuredIcon from '@/assets/images/injured.png';
 import emd from '@/assets/emd.json';
 
-// 지도 중심
 const props = defineProps({
   centerCoords: {
     type: Object,
@@ -20,13 +20,12 @@ const props = defineProps({
   },
 });
 
-// 각 구역 색
 const colorMap = {
   부산동물보호센터: '#800080', // 보라색
   동물보호관리협회: '#008000', // 초록색
   '(사)동부동물보호협회': '#0000FF', // 파란색
   청조동물병원: '#FF0000', // 빨간색
-  '(사)하얀비둘기': '#FFA500', // 주황색
+  '(사)하얀비둘기': '#000000', // 검정색
   동구종합동물병원: '#4B0082', // 남색
 };
 
@@ -39,9 +38,37 @@ const usernameToDistricts = {
   동구종합동물병원: ['동구'],
 };
 
-// 각 구역 그룹의 Polygon 객체를 저장할 객체
 const polygons = {};
 const activeDistrictGroup = ref(null);
+
+let map = null;
+let isOpenInfo = null;
+
+const markersById = {};
+const infoById = {};
+const usernameById = {};
+
+const highlightPolygon = (groupName) => {
+  if (activeDistrictGroup.value && polygons[activeDistrictGroup.value]) {
+    polygons[activeDistrictGroup.value].forEach((polygon) => {
+      const originalColor = colorMap[activeDistrictGroup.value] || '#999999';
+      polygon.setOptions({
+        fillColor: originalColor,
+        fillOpacity: 0.1,
+      });
+    });
+  }
+  if (polygons[groupName]) {
+    polygons[groupName].forEach((polygon) => {
+      const newColor = colorMap[groupName];
+      polygon.setOptions({
+        fillColor: newColor,
+        fillOpacity: 0.3,
+      });
+    });
+  }
+  activeDistrictGroup.value = groupName;
+};
 
 onMounted(() => {
   const script = document.createElement('script');
@@ -51,94 +78,71 @@ onMounted(() => {
   document.head.appendChild(script);
 
   script.onload = async () => {
-    const map = new naver.maps.Map('map', {
+    map = new naver.maps.Map('map', {
       center: new naver.maps.LatLng(props.centerCoords.lat, props.centerCoords.lng),
       zoom: 11,
+      minZoom: 8,
+      maxZoom: 18,
     });
-
-    let isOpenInfo = null;
 
     naver.maps.Event.addListener(map, 'click', () => {
       if (isOpenInfo) {
         isOpenInfo.close();
         isOpenInfo = null;
       }
-      highlightPolygon(null); // 클릭 시 하이라이트 해제
+      highlightPolygon(null);
     });
 
-    // 폴리곤 하이라이트 함수
-    const highlightPolygon = (groupName) => {
-      // 이전에 하이라이트된 구역이 있다면 원래 색상으로 되돌리기
-      if (activeDistrictGroup.value && polygons[activeDistrictGroup.value]) {
-        polygons[activeDistrictGroup.value].forEach((polygon) => {
-          const originalColor = colorMap[activeDistrictGroup.value];
-          polygon.setOptions({
-            fillColor: originalColor,
-            fillOpacity: 0.3,
-          });
+    const pathByDistrict = {};
+    emd.features.forEach((feature) => {
+      const districtName = feature?.properties?.SIG_KOR_NM;
+      if (!districtName) return;
+      const geom = feature?.geometry;
+      if (!geom) return;
+      if (!pathByDistrict[districtName]) pathByDistrict[districtName] = [];
+      if (geom.type === 'Polygon') {
+        const rings = geom.coordinates[0] || [];
+        const path = rings.map(([lng, lat]) => new naver.maps.LatLng(lat, lng));
+        pathByDistrict[districtName].push(path);
+      } else if (geom.type === 'MultiPolygon') {
+        geom.coordinates.forEach((poly) => {
+          const rings = poly[0] || [];
+          const path = rings.map(([lng, lat]) => new naver.maps.LatLng(lat, lng));
+          pathByDistrict[districtName].push(path);
         });
       }
+    });
 
-      // 새로 선택된 구역 하이라이트
-      if (polygons[groupName]) {
-        polygons[groupName].forEach((polygon) => {
-          const newColor = colorMap[groupName];
-          polygon.setOptions({
-            fillColor: newColor,
-            fillOpacity: 0.8,
-          });
-        });
-      }
-      activeDistrictGroup.value = groupName;
-    };
+    Object.entries(usernameToDistricts).forEach(([username, districts]) => {
+      const paths = [];
+      districts.forEach((d) => {
+        const ps = pathByDistrict[d];
+        if (ps && ps.length) ps.forEach((p) => paths.push(p));
+      });
+      if (!paths.length) return;
+      const polyList = paths.map(
+        (p) =>
+          new naver.maps.Polygon({
+            map,
+            paths: p,
+            strokeColor: colorMap[username],
+            strokeOpacity: 0.2,
+            strokeWeight: 1,
+            fillColor: colorMap[username],
+            fillOpacity: 0.1,
+          })
+      );
+      polygons[username] = polyList;
+    });
 
     const fetchShelters = async () => {
       try {
         const shelters = await getAllShelters();
-
-        // 폴리곤 렌더링 (username → 담당 구)
-        emd.features.forEach((feature) => {
-          const districtName = feature?.properties?.SIG_KOR_NM;
-          if (!districtName) return;
-
-          Object.entries(usernameToDistricts).forEach(([username, districts]) => {
-            if (!Array.isArray(districts)) return;
-            if (!districts.includes(districtName)) return;
-
-            let coordinates = null;
-            if (feature.geometry.type === 'Polygon') {
-              coordinates = feature.geometry.coordinates;
-            } else if (feature.geometry.type === 'MultiPolygon') {
-              coordinates = feature.geometry.coordinates.flat();
-            }
-
-            if (!coordinates) return;
-
-            coordinates.forEach((path) => {
-              const polygonPath = path.map((coord) => new naver.maps.LatLng(coord[1], coord[0]));
-              const groupColor = colorMap[username] || '#FF0000';
-
-              const polygon = new naver.maps.Polygon({
-                map: map,
-                paths: polygonPath,
-                fillColor: groupColor,
-                fillOpacity: 0.3,
-                strokeColor: groupColor,
-                strokeOpacity: 0.2,
-                strokeWeight: 1,
-              });
-
-              if (!polygons[username]) polygons[username] = [];
-              polygons[username].push(polygon);
-            });
-          });
-        });
-
-        // 마커 + 인포윈도우 렌더링
         shelters.forEach((item) => {
           const {
             id,
             username,
+            description,
             tel,
             latitude,
             longitude,
@@ -154,7 +158,6 @@ onMounted(() => {
           const curr = Number(curCapacity) || 0;
           const utilization = total > 0 ? Math.round((curr / total) * 100) : 0;
 
-          // 특징 라벨 가공(표시용)
           const featureLabel = (() => {
             const raw = String(shelterFeature ?? '').toUpperCase();
             if (raw.includes('HOSPITAL')) return '병원 연계';
@@ -168,7 +171,7 @@ onMounted(() => {
 
           const marker = new naver.maps.Marker({
             position: new naver.maps.LatLng(Number(latitude), Number(longitude)),
-            map: map,
+            map,
             icon: {
               url: iconImage,
               size: new naver.maps.Size(50, 50),
@@ -178,7 +181,6 @@ onMounted(() => {
             title: username,
           });
 
-          // 인포윈도우
           const contentString = `
             <div class="info-card">
               <div class="info-header">
@@ -198,7 +200,6 @@ onMounted(() => {
             </div>
           `;
 
-          // 인포윈도우 생성
           const infowindow = new naver.maps.InfoWindow({
             content: contentString,
             backgroundColor: 'transparent',
@@ -207,31 +208,31 @@ onMounted(() => {
             disableAnchor: false,
           });
 
-          // 마커 클릭 시: 인포윈도우 토글 + 폴리곤 하이라이트(username 기준)
-          naver.maps.Event.addListener(marker, 'click', () => {
-            if (isOpenInfo) {
-              if (isOpenInfo === infowindow) {
-                isOpenInfo.close();
-                isOpenInfo = null;
-                highlightPolygon(null);
-                return;
-              } else {
-                isOpenInfo.close();
-                isOpenInfo = null;
-              }
+          naver.maps.Event.addListener(marker, 'mouseover', () => {
+            if (isOpenInfo && isOpenInfo !== infowindow) {
+              isOpenInfo.close();
             }
-
-            // username 기준 하이라이트 시도(매핑이 없으면 무시)
+            infowindow.open(map, marker);
+            isOpenInfo = infowindow;
             if (username && polygons[username]) {
               highlightPolygon(username);
             } else {
               highlightPolygon(null);
             }
-
-            // 인포윈도우 열기
-            infowindow.open(map, marker);
-            isOpenInfo = infowindow;
+            marker.setAnimation(naver.maps.Animation.BOUNCE);
           });
+
+          naver.maps.Event.addListener(marker, 'mouseout', () => {
+            marker.setAnimation(null);
+            highlightPolygon(null);
+            infowindow.close();
+          });
+
+          if (id != null) {
+            markersById[id] = marker;
+            infoById[id] = infowindow;
+            usernameById[id] = username || null;
+          }
         });
       } catch (error) {
         console.error('Error fetching shelters:', error);
@@ -239,7 +240,40 @@ onMounted(() => {
     };
 
     await fetchShelters();
+    highlightPolygon(null);
   };
+});
+
+watch(hoveredShelterId, (newId, oldId) => {
+  if (!map || typeof naver === 'undefined') return;
+  if (oldId && markersById[oldId]) {
+    markersById[oldId].setAnimation(null);
+    if (infoById[oldId]) infoById[oldId].close();
+  }
+  if (newId && markersById[newId]) {
+    const marker = markersById[newId];
+    const info = infoById[newId];
+    if (isOpenInfo && isOpenInfo !== info) {
+      isOpenInfo.close();
+    }
+    if (info) {
+      info.open(map, marker);
+      isOpenInfo = info;
+    }
+    const uname = usernameById[newId];
+    if (uname && polygons[uname]) {
+      highlightPolygon(uname);
+    } else {
+      highlightPolygon(null);
+    }
+    marker.setAnimation(naver.maps.Animation.BOUNCE);
+  } else {
+    highlightPolygon(null);
+    if (isOpenInfo) {
+      isOpenInfo.close();
+      isOpenInfo = null;
+    }
+  }
 });
 </script>
 
