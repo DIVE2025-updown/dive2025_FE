@@ -86,7 +86,7 @@
       <!-- 보낸 신청(요청자) -->
       <section class="card">
         <h3 class="title">신청 내역</h3>
-        <div v-if="sent.length === 0" class="empty">보낸 신청이 없습니다.</div>
+        <div v-if="sentGroupA.length === 0" class="empty">보낸 신청이 없습니다.</div>
 
         <div v-else class="table-wrap">
           <table class="table">
@@ -101,7 +101,80 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="app in sent" :key="app.id">
+              <tr v-for="app in sentGroupA" :key="app.id">
+                <td data-label="대상 보호소">{{ app.toShelterName || app.toShelterId }}</td>
+                <td data-label="동물 ID">#{{ app.rescuedId }}</td>
+                <td data-label="동물 상태">
+                  <span class="cond-pill" :class="condClass(app.animalCondition)">
+                    {{ condLabel(app.animalCondition) }}
+                  </span>
+                </td>
+                <td data-label="신청일">{{ app.updatedAt }}</td>
+                <td data-label="상태">
+                  <span class="status-badge" :class="statusClass(app.requestStatus)">
+                    {{ statusLabel(app.requestStatus) }}
+                  </span>
+
+                  <!-- 거절 사유 표시 -->
+                  <div v-if="app.requestStatus === 'TARGET_REJECTED'" class="reason-inline">
+                    <span class="badge tiny">사유</span>
+                    <span class="reason-text">{{ app.message?.trim() || '사유 없음' }}</span>
+                  </div>
+                  <div
+                    v-if="
+                      app.requestStatus === 'TRANSPORTER_ACCEPTED' &&
+                      (app.transporterName || app.transporterId)
+                    "
+                    class="reason-inline"
+                  >
+                    <span class="badge tiny">운송자</span>
+                    <span class="reason-text">{{
+                      app.transporterName || `ID #${app.transporterId}`
+                    }}</span>
+                  </div>
+                </td>
+                <td data-label="액션">
+                  <div class="actions-inline">
+                    <template v-if="app.requestStatus === 'PENDING_TARGET'">
+                      <button
+                        class="btn xs danger"
+                        :disabled="busy.has(app.id)"
+                        @click="onCancel(app)"
+                      >
+                        취소
+                      </button>
+                    </template>
+                    <template v-else-if="app.requestStatus === 'TARGET_ACCEPTED'">
+                      <button class="btn xs primary" @click="openTprModal(app)">운송자 지정</button>
+                    </template>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <header class="mypage-header">
+        <h2>입양센터 신청 내역</h2>
+      </header>
+      <section class="card">
+        <h3 class="title">신청 내역</h3>
+        <div v-if="sentGroupB.length === 0" class="empty">보낸 신청이 없습니다.</div>
+
+        <div v-else class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width: 17%">대상 입양센터</th>
+                <th style="width: 14%">동물 ID</th>
+                <th style="width: 18%">동물 상태</th>
+                <th style="width: 20%">신청일</th>
+                <th style="width: 19%">상태</th>
+                <th style="width: 12%">액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="app in sentGroupB" :key="app.id">
                 <td data-label="대상 보호소">{{ app.toShelterName || app.toShelterId }}</td>
                 <td data-label="동물 ID">#{{ app.rescuedId }}</td>
                 <td data-label="동물 상태">
@@ -155,6 +228,8 @@
         </div>
       </section>
     </div>
+
+    <div></div>
 
     <!-- 거절 사유 입력 모달 (원래 디자인) -->
     <div
@@ -252,6 +327,8 @@ const rejectModal = ref({
   message: '',
 });
 
+const excludedNames = ['유기동물입양센터', '반려동물복지문화센터'];
+
 const condLabel = (c) => {
   const v = String(c || '').toUpperCase();
   if (v === 'NORMAL') return '정상';
@@ -299,8 +376,10 @@ const refresh = async () => {
       fetchToShelter(shelterId),
       fetchFromShelter(shelterId),
     ]);
+
     received.value = receivedList;
     sent.value = sentList;
+    console.log(sent.value);
   } catch (e) {
     console.error('[Mypage load error]', e);
     errorMsg.value = '내역을 불러오지 못했습니다.';
@@ -472,6 +551,13 @@ const applyToTransporterFromModal = async (tpr) => {
   }
 };
 
+const sentGroupA = computed(() =>
+  sent.value.filter((app) => !excludedNames.includes(String(app.toShelterName || '').trim()))
+);
+
+const sentGroupB = computed(() =>
+  sent.value.filter((app) => excludedNames.includes(String(app.toShelterName || '').trim()))
+);
 onMounted(refresh);
 </script>
 
