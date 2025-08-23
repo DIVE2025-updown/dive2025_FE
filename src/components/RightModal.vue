@@ -24,7 +24,7 @@ defineEmits(['close']);
 .right-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  /* background: rgba(0, 0, 0, 0.17); */
   z-index: 2000;
   display: flex;
   justify-content: flex-end;

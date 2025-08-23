@@ -102,6 +102,7 @@ const submit = async () => {
       emit('success', { username: auth.username, role: auth.role });
       close();
     }
+    window.location.href = '/';
   } finally {
     loading.value = false;
   }
@@ -116,7 +117,7 @@ const submit = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 20000;
 }
 
 .modal-dialog {

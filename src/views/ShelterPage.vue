@@ -109,7 +109,7 @@
                     {{ condLabel(app.animalCondition) }}
                   </span>
                 </td>
-                <td data-label="신청일">{{ app.createdAt }}</td>
+                <td data-label="신청일">{{ app.updatedAt }}</td>
                 <td data-label="상태">
                   <span class="status-badge" :class="statusClass(app.requestStatus)">
                     {{ statusLabel(app.requestStatus) }}
@@ -522,7 +522,7 @@ onMounted(refresh);
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 16px;
 }
 .table thead th {
   text-align: left;
@@ -535,6 +535,7 @@ onMounted(refresh);
   padding: 10px 12px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  height: 50px;
 }
 .table tbody tr:hover {
   background: #f8fafc;
@@ -548,9 +549,9 @@ onMounted(refresh);
 /* 상태 뱃지 */
 .status-badge {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 3px 8px 5px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 700;
   border: 1px solid transparent;
 }
@@ -681,8 +682,8 @@ onMounted(refresh);
   gap: 6px;
 }
 .badge.tiny {
-  padding: 2px 6px;
-  font-size: 11px;
+  padding: 2px 6px 4px 6px;
+  font-size: 14px;
   border-radius: 6px;
   background: #dc2626;
   color: #fff;
@@ -852,9 +853,9 @@ onMounted(refresh);
 /* 동물 상태 뱃지 */
 .cond-pill {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 3px 8px 5px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
 }
 
