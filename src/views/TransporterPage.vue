@@ -13,27 +13,65 @@
         <h3 class="title">접수 내역</h3>
         <div v-if="received.length === 0" class="empty">받은 접수가 없습니다.</div>
 
-        <ul v-else class="list">
-          <li v-for="app in received" :key="app.id" class="item">
-            <div class="col">
-              <strong>
-                ← {{ app.fromShelterName || app.fromShelterId || app.fromName || '보호소' }}
-              </strong>
-              <small>요청 생성: {{ app.createdAt }}</small>
-              <small> 상태: {{ app.tprDecisionStatus || app.requestStatus || 'PENDING' }} </small>
-            </div>
+        <!-- 표 형식 -->
+        <div v-else class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width: 28%">출발보호소</th>
+                <th style="width: 28%">도착보호소</th>
+                <th style="width: 22%">운송 결정 상태</th>
+                <th style="width: 22%">신청일</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="app in received" :key="app.id">
+                <td data-label="fromShelterName">
+                  {{ app.fromShelterName || app.fromShelterId || app.fromName || '보호소' }}
+                </td>
+                <td data-label="toShelterName">
+                  {{ app.toShelterName || app.toShelterId || app.toName || '-' }}
+                </td>
+                <td data-label="tpr_decision_status">
+                  <span
+                    class="status-badge"
+                    :class="tprClass(app.tprDecisionStatus || app.requestStatus)"
+                  >
+                    {{ tprLabel(app.tprDecisionStatus || app.requestStatus) }}
+                  </span>
 
-            <!-- PENDING이면 수락/거절 -->
-            <div class="actions" v-if="isPending(app.tprDecisionStatus || app.requestStatus)">
-              <button class="btn primary" :disabled="busy.has(app.id)" @click="onAccept(app)">
-                수락
-              </button>
-              <button class="btn danger" :disabled="busy.has(app.id)" @click="openReject(app)">
-                거절
-              </button>
-            </div>
-          </li>
-        </ul>
+                  <!-- PENDING이면 상태 셀 안에서 액션 노출 -->
+                  <div
+                    class="actions-inline"
+                    v-if="isPending(app.tprDecisionStatus || app.requestStatus)"
+                  >
+                    <button
+                      class="btn xs primary"
+                      :disabled="busy.has(app.id)"
+                      @click="onAccept(app)"
+                    >
+                      수락
+                    </button>
+                    <button
+                      class="btn xs danger"
+                      :disabled="busy.has(app.id)"
+                      @click="openReject(app)"
+                    >
+                      거절
+                    </button>
+                  </div>
+
+                  <!-- 거절 사유 -->
+                  <div v-if="showRejectReason(app)" class="reason-inline">
+                    <span class="badge tiny">사유</span>
+                    <span class="reason-text">{{ (app.message || '').trim() || '사유 없음' }}</span>
+                  </div>
+                </td>
+                <td data-label="created_at">{{ app.createdAt }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
 
@@ -87,8 +125,30 @@ const rejectModal = ref({
 });
 const rejectBusy = ref(false);
 
+// 상태 라벨/클래스
+const tprLabel = (s) => {
+  const v = String(s || '').toUpperCase();
+  if (v.includes('PENDING')) return 'PENDING';
+  if (v.includes('ACCEPT')) return 'ACCEPT';
+  if (v.includes('REJECT')) return 'REJECT';
+  return v || '-';
+};
+const tprClass = (s) => {
+  const v = String(s || '').toUpperCase();
+  if (v.includes('REJECT')) return 'rejected';
+  if (v.includes('ACCEPT')) return 'accepted';
+  if (v.includes('PENDING')) return 'pending';
+  return 'unknown';
+};
+
 // "PENDING" 포함 여부로 판정 (TPR or TRR 양쪽 필드 대응)
 const isPending = (s) => !!s && String(s).toUpperCase().includes('PENDING');
+
+// 거절 사유 노출 여부
+const showRejectReason = (app) => {
+  const v = String(app.tprDecisionStatus || app.requestStatus || '').toUpperCase();
+  return v.includes('REJECT');
+};
 
 // Set 반응성 보장
 const lock = (id) => {
@@ -163,7 +223,6 @@ const openReject = (app) => {
   rejectModal.value.id = app.id;
   rejectModal.value.trRequestId = trRequestId;
   rejectModal.value.message = '';
-  // 백드롭 포커스 (ESC 닫기 위한 키 이벤트 활성)
   setTimeout(() => {
     const backdrop = document.querySelector('.modal-backdrop');
     backdrop && backdrop.focus();
@@ -231,47 +290,6 @@ onMounted(refresh);
 .title {
   margin-top: 0;
 }
-.list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.item {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 12px;
-  background: #fafafa;
-  border-radius: 8px;
-}
-.col {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.btn {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.btn.primary {
-  background: #2563eb;
-  color: #fff;
-}
-.btn.danger {
-  background: #dc2626;
-  color: #fff;
-}
 .empty {
   color: #666;
   padding: 24px 4px;
@@ -285,44 +303,264 @@ onMounted(refresh);
   margin-bottom: 8px;
 }
 
+/* ---------- 표 ---------- */
+.table-wrap {
+  width: 100%;
+  overflow: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table thead th {
+  text-align: left;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+.table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* 상태 뱃지 */
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+.status-badge.pending {
+  color: #6b7280;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+.status-badge.accepted {
+  color: #065f46;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+.status-badge.rejected {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.status-badge.unknown {
+  color: #334155;
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+/* 표 셀 내 액션 & 사유 */
+.actions-inline {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.reason-inline {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.badge.tiny {
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 6px;
+  background: #dc2626;
+  color: #fff;
+  font-weight: 700;
+}
+.reason-text {
+  color: #374151;
+}
+
+/* 버튼 */
+.btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #e5e7eb;
+}
+.btn.primary {
+  background: #2563eb;
+  color: #fff;
+}
+.btn.danger {
+  background: #dc2626;
+  color: #fff;
+}
+.btn.xs {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+/* ---------- 반응형 (모바일 카드형) ---------- */
+@media (max-width: 720px) {
+  .table thead {
+    display: none;
+  }
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+  .table tr {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    background: #fafafa;
+  }
+  .table tbody td {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 8px;
+    border: none;
+    padding: 10px 12px;
+  }
+  .table tbody td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #374151;
+  }
+}
+
 /* Modal */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(17, 24, 39, 0.5);
+  background: rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   display: grid;
   place-items: center;
-  z-index: 50;
+  z-index: 100;
   outline: none;
+
+  opacity: 0;
+  animation: backdrop-fade 180ms ease-out forwards;
 }
+
 .modal {
-  width: min(640px, 92vw);
+  width: min(560px, 92vw);
   background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border-radius: 14px;
+  padding: 18px 18px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 10px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+
+  transform: translateY(8px) scale(0.98);
+  opacity: 0;
+  animation: modal-pop 200ms cubic-bezier(0.2, 0.6, 0.2, 1) 60ms forwards;
 }
+
 .modal-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 10px;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: #111827;
 }
-.muted {
-  color: #6b7280;
-  font-weight: 400;
-  font-size: 0.9em;
-}
+
 .modal-textarea {
   width: 100%;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: 10px;
+  padding: 12px 14px;
   resize: vertical;
   font: inherit;
   min-height: 120px;
+  background: #fafafa;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
 }
+
+.modal-textarea:focus {
+  outline: none;
+  border-color: #0a84ff;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
+}
+
 .modal-actions {
-  margin-top: 12px;
+  margin-top: 14px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   justify-content: flex-end;
+}
+
+/* 액션 버튼들(모달 안에서만 살짝 다듬기) */
+.modal-actions .btn {
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #111827;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: transform 80ms ease, box-shadow 120ms ease, background 120ms ease,
+    border-color 120ms ease;
+}
+
+.modal-actions .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+}
+
+.modal-actions .btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.modal-actions .btn.primary {
+  background: #0a84ff;
+  border-color: #0a84ff;
+  color: #fff;
+}
+
+.modal-actions .btn.primary:hover {
+  background: #0a7bff;
+  border-color: #0a7bff;
+}
+
+.modal-actions .btn.danger {
+  background: #ff3b30;
+  border-color: #ff3b30;
+  color: #fff;
+}
+
+.modal-actions .btn.danger:hover {
+  background: #f33227;
+  border-color: #f33227;
+}
+
+/* 작은 보조 텍스트(이미 쓰는 .muted가 있으면 그대로 사용) */
+.muted {
+  color: #6b7280;
+}
+
+/* 애니메이션 */
+@keyframes backdrop-fade {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes modal-pop {
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 </style>
