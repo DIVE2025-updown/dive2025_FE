@@ -13,13 +13,22 @@
         <span>지도</span>
       </RouterLink>
 
-      <RouterLink class="menu-item apply-link" to="/apply">
+      <button class="menu-item-title apply-link" @click="isApplying = !isApplying">
         <i class="fa-solid fa-file-alt menu-icon"></i>
         <span>신청</span>
-        <span class="notification" v-if="applicationsStore.pendingCount > 0">
-          {{ applicationsStore.pendingCount }}
-        </span>
-      </RouterLink>
+      </button>
+      <transition name="apply-fade">
+        <div v-if="isApplying" class="apply-container">
+          <RouterLink class="menu-item apply-link" to="/apply">
+            <i class="fa-solid fa-paper-plane menu-icon-paper-plane"></i>
+            <span>이관 신청</span>
+          </RouterLink>
+          <RouterLink class="menu-item apply-link" to="/adopt">
+            <i class="fa-solid fa-paper-plane menu-icon-paper-plane"></i>
+            <span>입양 신청</span>
+          </RouterLink>
+        </div>
+      </transition>
 
       <RouterLink class="menu-item" to="/stats">
         <i class="fa-solid fa-chart-pie menu-icon"></i>
@@ -84,6 +93,7 @@ import LoginModal from '@/components/Login.vue';
 const applicationsStore = useApplicationsStore();
 const auth = useAuthStore();
 const router = useRouter();
+const isApplying = ref(false);
 
 const showLogoutModal = ref(false);
 
@@ -145,6 +155,30 @@ function onLoginSuccess(payload) {
   flex-direction: column;
   margin-top: 20px;
 }
+.menu-item-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  color: #444;
+  text-decoration: none;
+  font-size: 15px;
+  border-right: 3px solid transparent;
+  transition: all 0.2s ease;
+  position: relative;
+  background: #ffffff;
+  border: none;
+}
+.menu-item-title:hover {
+  background: #f3f9ff;
+  color: #0ea5e9;
+}
+.menu-item-title-active {
+  background: #e6f4ff;
+  border-right: 3px solid #0ea5e9;
+  color: #0ea5e9;
+  font-weight: 600;
+}
 .menu-item {
   display: flex;
   align-items: center;
@@ -168,6 +202,10 @@ function onLoginSuccess(payload) {
   font-weight: 600;
 }
 .menu-icon {
+  font-size: 16px;
+}
+.menu-icon-paper-plane {
+  margin-left: 15px;
   font-size: 16px;
 }
 
@@ -261,5 +299,45 @@ function onLoginSuccess(payload) {
 }
 .close-btn:hover {
   background: #0284c7;
+}
+
+/* 토글 컨테이너가 높이를 가지며 깔끔히 애니메이션되도록 설정 */
+.apply-container {
+  overflow: hidden;
+  will-change: opacity, max-height, transform;
+}
+
+/* :deep 사용해 scoped 영향 우회 */
+:deep(.apply-fade-enter-active),
+:deep(.apply-fade-leave-active) {
+  transition: opacity 0.1s ease, max-height 0.3s ease, transform 0.1s ease;
+}
+
+/* 초기(등장 시작) 상태 */
+:deep(.apply-fade-enter-from) {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-6px);
+}
+
+/* 등장 완료 상태 */
+:deep(.apply-fade-enter-to) {
+  opacity: 1;
+  max-height: 200px; /* 충분히 큰 값(항목 수에 따라 조정) */
+  transform: translateY(0);
+}
+
+/* 사라질 때 초기 상태(leave-from) */
+:deep(.apply-fade-leave-from) {
+  opacity: 1;
+  max-height: 200px;
+  transform: translateY(0);
+}
+
+/* 사라질 때 최종 상태(leave-to) */
+:deep(.apply-fade-leave-to) {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-6px);
 }
 </style>

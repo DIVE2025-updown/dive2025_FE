@@ -34,9 +34,13 @@ watch(
 watch(selected, (v) => emit('update:modelValue', v));
 
 /** 계산 데이터 */
-const current = computed(() => props.dataByYear[selected.value] || { dogs: 0, cats: 0 });
+const current = computed(
+    () => props.dataByYear[selected.value] || { dogs: 0, cats: 0 }
+);
 const totals = computed(() => current.value.dogs + current.value.cats);
-const dogPct = computed(() => (totals.value ? (current.value.dogs / totals.value) * 100 : 0));
+const dogPct = computed(() =>
+    totals.value ? (current.value.dogs / totals.value) * 100 : 0
+);
 const catPct = computed(() => 100 - dogPct.value);
 
 /** 차트 플러그인: 중앙 아이콘/텍스트 */
@@ -71,7 +75,12 @@ const donutData = computed(() => ({
 
 const donutOptions = {
     animation: { duration: 600, easing: 'easeOutCubic' },
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.label}: ${c.raw.toFixed(1)}%` } } },
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            callbacks: { label: (c) => `${c.label}: ${c.raw.toFixed(1)}%` },
+        },
+    },
 };
 </script>
 
@@ -83,12 +92,16 @@ const donutOptions = {
         </div>
 
         <!-- 타이틀/설명 -->
-        <h2 class="title">How many dogs or cats arrive at shelters?</h2>
-        <p class="desc">Discover how many animals arrive at shelters and how their characteristics are distributed. Is there anything that surprises you?</p>
+        <h2 class="title">보호소에는 몇 마리의 개와 고양이가 들어올까요?</h2>
+        <p class="desc">
+            보호소에 들어오는 동물의 수와 그들의 특징이 어떻게 분포되어 있는지
+            확인할 수 있습니다.
+        </p>
 
         <!-- "In {year} were taken in..." -->
         <div class="subhead">
-            In <span class="year">{{ selected }}</span> were taken in…
+            <span class="year">{{ selected }}</span> 년에 보호된 동물은 아래와
+            같아요.
         </div>
 
         <!-- 본문: 왼쪽(개), 도넛, 오른쪽(고양이) -->
@@ -100,11 +113,17 @@ const donutOptions = {
                 <div class="count">
                     <AnimatedCounter :value="current.dogs" :duration="800" />
                 </div>
-                <div class="label">DOGS</div>
+                <div class="label">개</div>
             </div>
 
             <div class="ring">
-                <ChartCanvas type="doughnut" :data="donutData" :options="donutOptions" :plugins="[centerTextPlugin]" :height="240" />
+                <ChartCanvas
+                    type="doughnut"
+                    :data="donutData"
+                    :options="donutOptions"
+                    :plugins="[centerTextPlugin]"
+                    :height="240"
+                />
             </div>
 
             <div class="side right" :style="{ '--c': colors.cat }">
@@ -114,7 +133,7 @@ const donutOptions = {
                 <div class="count">
                     <AnimatedCounter :value="current.cats" :duration="800" />
                 </div>
-                <div class="label">CATS</div>
+                <div class="label">고양이</div>
             </div>
         </div>
     </section>
@@ -126,6 +145,7 @@ const donutOptions = {
     border-radius: 18px;
     padding: 28px 26px 30px;
     box-shadow: 0 10px 30px rgba(16, 44, 84, 0.08);
+    margin-top: 30px;
 }
 .tabs-wrap {
     display: flex;

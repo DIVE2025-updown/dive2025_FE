@@ -173,10 +173,10 @@
               </div>
 
               <p class="meta-line id-line">공고번호 {{ image.desertionNo }}</p>
-              <p class="meta-line sub-line">{{ image.age }} · {{ image.weight }}</p>
-              <p class="meta-line day-line">
+              <p class="meta-line sub-line">{{ image.age }}년생 · {{ image.weight }}(Kg)</p>
+              <!-- <p class="meta-line day-line">
                 보호 {{ image.daysProtected ?? daysSince(image.rescueDate) }}일째
-              </p>
+              </p> -->
             </div>
           </div>
 
@@ -214,20 +214,20 @@
             </div>
           </div>
         </div>
-        <div v-if="destinationShelters.length === 0" class="no-shelters">
+        <div v-if="recommendedAdoptions.length === 0" class="no-shelters">
           추천 가능한 보호소가 없습니다.
         </div>
         <div
           v-else
           class="shelter-item"
-          v-for="shelter in destinationShelters"
+          v-for="shelter in recommendedAdoptions"
           :key="shelter.id"
           @mouseover="getToShelterId(shelter.id)"
           @mouseleave="clearHoveredShelter"
         >
-          <div class="count">{{ rankLabel(destinationShelters.indexOf(shelter) + 1) }}</div>
+          <div class="count">{{ rankLabel(recommendedAdoptions.indexOf(shelter) + 1) }}</div>
           <div class="shelter-info">
-            <strong>{{ shelter.description }}</strong>
+            <strong>{{ shelter.username }}</strong>
             <small
               >{{
                 shelter.shelterFeature === 'HOSPITAL'
@@ -253,8 +253,8 @@ import { ref, computed, onMounted } from 'vue';
 import Map from '@/views/Map.vue';
 import { hoveredShelterId, useApplicationsStore } from '@/stores/applications';
 import RightModal from '@/components/RightModal.vue';
-import { fetchTransferCandidates } from '@/api/rescued';
-import { getShelterPriority } from '@/api/shelter';
+import { fetchAdoptions } from '@/api/rescued';
+import { getAdoptionPriority } from '@/api/shelter';
 import { useAuthStore } from '@/stores/authStore';
 import { filter } from 'lodash';
 import { faWeight } from '@fortawesome/free-solid-svg-icons';
@@ -267,12 +267,21 @@ const isRightModalOpen = ref(false);
 const isLoadingShelters = ref(false);
 const destinationShelters = ref([]);
 const images = ref([]);
+const recommendedAdoptions = ref([]);
 
 const toShelterId = ref(null);
 const fromShelterId = ref(null);
 
+const rankLabel = (n) => {
+  if (n === 1) return '🥇';
+  if (n === 2) return '🥈';
+  if (n === 3) return '🥉';
+  return String(n);
+};
+
 const getToShelterId = (id) => {
   console.log(id);
+
   toShelterId.value = id;
   hoveredShelterId.value = id;
 };
@@ -289,12 +298,6 @@ const isLoading = ref(false);
 
 const currentShelterName = computed(() => images.value[0]?.careNm ?? '');
 
-const rankLabel = (n) => {
-  if (n === 1) return '🥇';
-  if (n === 2) return '🥈';
-  if (n === 3) return '🥉';
-  return String(n);
-};
 // ---------------------- 필터 상태 ----------------------
 const filters = ref({
   conditions: [], // ['MILD','SEVERE']
@@ -375,7 +378,7 @@ const loadTransferCandidates = async () => {
   isLoading.value = true;
 
   try {
-    const { data } = await fetchTransferCandidates({
+    const { data } = await fetchAdoptions({
       shelterId: auth.shelterId,
       offset: offset.value,
       limit,
@@ -396,8 +399,8 @@ const loadTransferCandidates = async () => {
       needsTransfer: animal.needsTransfer,
       animalCondition: animal.animalCondition,
       desertionNo: animal.desertionNo,
-      age: animal.age,
-      weight: animal.weight,
+      age: animal.parseAge,
+      weight: animal.parseWeight,
       daysProtected: animal.daysProtected,
       rescueDate: animal.rescueDate,
       latitude: animal.latitude,
@@ -497,6 +500,8 @@ const toggleSelect = (id) => {
 const isSelected = (id) => selectedImage.value === id;
 
 const openModal = async () => {
+  console.log(auth.latitude, auth.longitude);
+
   if (!selectedImage.value) return;
 
   // 선택된 동물의 정보 찾기
@@ -505,16 +510,14 @@ const openModal = async () => {
 
   isLoadingShelters.value = true;
   isRightModalOpen.value = true;
-
+  recommendedAdoptions.value = [];
   try {
-    const response = await getShelterPriority({
-      animalCondition: selectedAnimal.animalCondition,
-      longitude: selectedAnimal.longitude,
-      latitude: selectedAnimal.latitude,
-    });
-    getShelterPriority;
-    console.log('전체 API 응답:', response);
-    destinationShelters.value = response.data || response;
+    const params = {
+      fromShelterLatitude: auth.latitude,
+      fromShelterLongitude: auth.longitude,
+    };
+    const list = await getAdoptionPriority(params);
+    recommendedAdoptions.value = Array.isArray(list) ? list : [];
   } catch (error) {
     console.error('추천 보호소 조회 실패:', error);
     destinationShelters.value = [];
@@ -539,7 +542,7 @@ const applyToShelterFromModal = async (targetShelter) => {
 
   try {
     await applicationsStore.sendApplication(payload, auth.shelterId);
-    console.log(`'${targetShelter.description}'로 이관 신청 완료`);
+    console.log(`'${targetShelter.username}'로 이관 신청 완료`);
   } catch (err) {
     console.error('이관 신청 실패:', err);
   } finally {
@@ -1203,7 +1206,6 @@ onMounted(() => {
   margin-right: 8px;
 }
 .count {
-  font-size: 20px;
   margin-right: 30px;
 }
 </style>

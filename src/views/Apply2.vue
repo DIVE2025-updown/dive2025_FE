@@ -43,7 +43,16 @@ const theme = reactive({
 const totals = { total: 48496, perHour: 0.7, perDay: 17.4, perMonth: 527.1 };
 const split = { dogs: 2169, cats: 2739, dogPct: 44.2, catPct: 55.8 };
 /** ===== 1) 라인 차트 ===== */
-const lineYears = ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
+const lineYears = [
+    '2018',
+    '2019',
+    '2020',
+    '2021',
+    '2022',
+    '2023',
+    '2024',
+    '2025',
+];
 const lineTotals = [7408, 7969, 7382, 6685, 5983, 5239, 4908, 2922];
 const lineDogs = [4366, 4206, 3534, 3085, 2764, 2327, 2169, 1127];
 const lineCats = [3042, 3763, 3848, 3600, 3219, 2912, 2739, 1795];
@@ -51,19 +60,52 @@ const lineCats = [3042, 3763, 3848, 3600, 3219, 2912, 2739, 1795];
 const lineData = computed(() => ({
     labels: lineYears,
     datasets: [
-        { label: 'Total dogs and cats', data: lineTotals, borderColor: theme.lineTotal, backgroundColor: theme.lineTotal, pointRadius: 3, tension: 0.3 },
-        { label: 'Dogs', data: lineDogs, borderColor: theme.lineDog, backgroundColor: theme.lineDog, pointRadius: 3, tension: 0.3 },
-        { label: 'Cats', data: lineCats, borderColor: theme.lineCat, backgroundColor: theme.lineCat, pointRadius: 3, tension: 0.3 },
+        {
+            label: '개와 고양이',
+            data: lineTotals,
+            borderColor: theme.lineTotal,
+            backgroundColor: theme.lineTotal,
+            pointRadius: 3,
+            tension: 0.3,
+        },
+        {
+            label: '개',
+            data: lineDogs,
+            borderColor: theme.lineDog,
+            backgroundColor: theme.lineDog,
+            pointRadius: 3,
+            tension: 0.3,
+        },
+        {
+            label: '고양이',
+            data: lineCats,
+            borderColor: theme.lineCat,
+            backgroundColor: theme.lineCat,
+            pointRadius: 3,
+            tension: 0.3,
+        },
     ],
 }));
 const lineOptions = {
     scales: {
-        y: { ticks: { callback: (v) => Number(v).toLocaleString() }, grid: { color: '#edf2f9' } },
+        y: {
+            ticks: { callback: (v) => Number(v).toLocaleString() },
+            grid: { color: '#edf2f9' },
+        },
         x: { grid: { display: false } },
     },
     plugins: {
-        legend: { display: true, position: 'top', labels: { usePointStyle: true } },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}` } },
+        legend: {
+            display: true,
+            position: 'top',
+            labels: { usePointStyle: true },
+        },
+        tooltip: {
+            callbacks: {
+                label: (ctx) =>
+                    `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}`,
+            },
+        },
     },
 };
 
@@ -71,62 +113,147 @@ const lineOptions = {
 const stackedHBar = (showLegend = false) => ({
     indexAxis: 'y',
     scales: {
-        x: { stacked: true, max: 100, ticks: { callback: (v) => `${v}%` }, grid: { color: '#edf2f9' } },
+        x: {
+            stacked: true,
+            max: 100,
+            ticks: { callback: (v) => `${v}%` },
+            grid: { color: '#edf2f9' },
+        },
         y: { stacked: true, grid: { display: false } },
     },
-    plugins: { legend: { display: showLegend }, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}%` } } },
+    plugins: {
+        legend: { display: showLegend },
+        tooltip: {
+            callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}%` },
+        },
+    },
 });
 
 /** ===== 3) 품종 ===== */
 const breedData = computed(() => ({
-    labels: ['Dogs', 'Cats'],
+    labels: ['개', '고양이'],
     datasets: [
-        { label: 'Breed', data: [27, 5], backgroundColor: theme.bar1, borderRadius: 8, barThickness: 24 },
-        { label: 'Mixed-breed', data: [73, 95], backgroundColor: theme.bar2, borderRadius: 8, barThickness: 24 },
+        {
+            label: '순종',
+            data: [27, 5],
+            backgroundColor: theme.bar1,
+            borderRadius: 8,
+            barThickness: 24,
+        },
+        {
+            label: '믹스견',
+            data: [73, 95],
+            backgroundColor: theme.bar2,
+            borderRadius: 8,
+            barThickness: 24,
+        },
     ],
 }));
 
 /** ===== 4) 나이 ===== */
 const ageData = computed(() => ({
-    labels: ['Dogs', 'Cats'],
+    labels: ['개', '고양이'],
     datasets: [
-        { label: 'Puppy/Kitten', data: [24, 49], backgroundColor: theme.bar1, borderRadius: 8, barThickness: 24 },
-        { label: 'Adult', data: [60, 43], backgroundColor: theme.bar2, borderRadius: 8, barThickness: 24 },
-        { label: 'Senior', data: [16, 8], backgroundColor: theme.bar3, borderRadius: 8, barThickness: 24 },
+        {
+            label: '새끼',
+            data: [24, 49],
+            backgroundColor: theme.bar1,
+            borderRadius: 8,
+            barThickness: 24,
+        },
+        {
+            label: '성체',
+            data: [60, 43],
+            backgroundColor: theme.bar2,
+            borderRadius: 8,
+            barThickness: 24,
+        },
+        {
+            label: '노령',
+            data: [16, 8],
+            backgroundColor: theme.bar3,
+            borderRadius: 8,
+            barThickness: 24,
+        },
     ],
 }));
 
 /** ===== 5) 건강 상태 ===== */
 const healthData = computed(() => ({
-    labels: ['Dogs', 'Cats'],
+    labels: ['개', '고양이'],
     datasets: [
-        { label: 'Injured', data: [14, 15], backgroundColor: theme.bar1, borderRadius: 8, barThickness: 24 },
-        { label: 'Healthy', data: [59, 48], backgroundColor: theme.bar2, borderRadius: 8, barThickness: 24 },
-        { label: 'Sick', data: [28, 38], backgroundColor: theme.bar3, borderRadius: 8, barThickness: 24 },
+        {
+            label: '부상',
+            data: [14, 15],
+            backgroundColor: theme.bar1,
+            borderRadius: 8,
+            barThickness: 24,
+        },
+        {
+            label: '건강',
+            data: [59, 48],
+            backgroundColor: theme.bar2,
+            borderRadius: 8,
+            barThickness: 24,
+        },
+        {
+            label: '질병',
+            data: [28, 38],
+            backgroundColor: theme.bar3,
+            borderRadius: 8,
+            barThickness: 24,
+        },
     ],
 }));
 
 /** ===== 6) 크기(개) - 단일 가로 바 ===== */
 const sizeDogData = computed(() => ({
-    labels: ['Small', 'Medium', 'Large'],
-    datasets: [{ label: 'Dogs', data: [18, 53, 29], backgroundColor: [theme.bar1, theme.bar2, theme.bar3], borderRadius: 8, barThickness: 24 }],
+    labels: ['소형', '중형', '대형'],
+    datasets: [
+        {
+            label: '개',
+            data: [18, 53, 29],
+            backgroundColor: [theme.bar1, theme.bar2, theme.bar3],
+            borderRadius: 8,
+            barThickness: 24,
+        },
+    ],
 }));
 const hBar = {
     indexAxis: 'y',
     scales: {
-        x: { max: 100, ticks: { callback: (v) => `${v}%` }, grid: { color: '#edf2f9' } },
+        x: {
+            max: 100,
+            ticks: { callback: (v) => `${v}%` },
+            grid: { color: '#edf2f9' },
+        },
         y: { grid: { display: false } },
     },
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.raw}%` } } },
+    plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c) => `${c.raw}%` } },
+    },
 };
 
 /** ===== 7) 계절 + 값 라벨 플러그인 ===== */
-const seasonLabels = ['Jan–Mar', 'Apr–Jun', 'Jul–Sep', 'Oct–Dec'];
+const seasonLabels = ['1월 - 3월', '4월 - 6월', '7월 - 9월', '10월 - 12월'];
 const seasonData = computed(() => ({
     labels: seasonLabels,
     datasets: [
-        { label: 'Dogs', data: [26, 24, 28, 23], backgroundColor: theme.dog, borderRadius: 6, barThickness: 26 },
-        { label: 'Cats', data: [19, 33, 31, 17], backgroundColor: theme.cat, borderRadius: 6, barThickness: 26 },
+        {
+            label: '개',
+            data: [26, 24, 28, 23],
+            backgroundColor: theme.dog,
+            borderRadius: 6,
+            barThickness: 26,
+        },
+        {
+            label: '고양이',
+            data: [19, 33, 31, 17],
+            backgroundColor: theme.cat,
+            borderRadius: 6,
+            barThickness: 26,
+        },
     ],
 }));
 const valueLabelPlugin = {
@@ -151,12 +278,18 @@ const valueLabelPlugin = {
 };
 const seasonOptions = {
     scales: {
-        y: { max: 40, ticks: { callback: (v) => `${v}%` }, grid: { color: '#edf2f9' } },
+        y: {
+            max: 40,
+            ticks: { callback: (v) => `${v}%` },
+            grid: { color: '#edf2f9' },
+        },
         x: { grid: { display: false } },
     },
     plugins: {
         legend: { display: true, position: 'bottom' },
-        tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}%` } },
+        tooltip: {
+            callbacks: { label: (c) => `${c.dataset.label}: ${c.raw}%` },
+        },
         valueLabel: { color: '#233549' },
     },
 };
@@ -164,11 +297,23 @@ const seasonOptions = {
 /** ===== 8) 마이크로칩 미니 도넛 ===== */
 const chipDogs = computed(() => ({
     labels: ['With chip', 'No chip'],
-    datasets: [{ data: [25, 75], backgroundColor: [theme.dog, theme.neutral], cutout: '72%' }],
+    datasets: [
+        {
+            data: [25, 75],
+            backgroundColor: [theme.dog, theme.neutral],
+            cutout: '72%',
+        },
+    ],
 }));
 const chipCats = computed(() => ({
     labels: ['With chip', 'No chip'],
-    datasets: [{ data: [5, 95], backgroundColor: [theme.cat, theme.neutral], cutout: '72%' }],
+    datasets: [
+        {
+            data: [5, 95],
+            backgroundColor: [theme.cat, theme.neutral],
+            cutout: '72%',
+        },
+    ],
 }));
 
 /** 미니 도넛 중앙 텍스트 플러그인 */
@@ -199,36 +344,66 @@ const centerTextPlugin = {
             <div class="hero-inner">
                 <div class="hero-icon">🐶🐱</div>
                 <div class="hero-text">
-                    <div class="hero-number">+{{ totals.total.toLocaleString() }}</div>
-                    <div class="hero-desc">2018년부터 지금까지 부산시에서 구조된 개와 고양이 수</div>
+                    <div class="hero-desc">
+                        2018년부터 지금까지 부산시에서 구조된 개와 고양이 수
+                    </div>
+                    <div class="hero-number">
+                        +{{ totals.total.toLocaleString() }}
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- 요약 수치 (블루 포인트) -->
         <section class="quick">
-            <QuickStat icon="🕑" :value="totals.perHour" :lines="['dogs and cats', 'collected every hour']" :accentColor="theme.dog" />
-            <QuickStat icon="📆" :value="totals.perDay" :lines="['dogs and cats', 'collected every day']" :accentColor="theme.dog" />
-            <QuickStat icon="🗓️" :value="totals.perMonth.toLocaleString()" :lines="['dogs and cats', 'collected every month']" :accentColor="theme.cat" />
+            <QuickStat
+                icon="🕑"
+                :value="totals.perHour"
+                :lines="['개와 고양이', '시간당 유입']"
+                :accentColor="theme.dog"
+            />
+            <QuickStat
+                icon="📆"
+                :value="totals.perDay"
+                :lines="['개와 고양이', '일간 유입']"
+                :accentColor="theme.dog"
+            />
+            <QuickStat
+                icon="🗓️"
+                :value="totals.perMonth.toLocaleString()"
+                :lines="['개와 고양이', '월간 유입']"
+                :accentColor="theme.cat"
+            />
         </section>
 
         <!-- 라인 차트 -->
         <section class="panel">
-            <h3>Evolution of the data on the entry and destination of animals</h3>
+            <h3>연도별 보호 현황 추이</h3>
             <div class="card tall">
-                <ChartCanvas type="line" :data="lineData" :options="lineOptions" :height="340" />
+                <ChartCanvas
+                    type="line"
+                    :data="lineData"
+                    :options="lineOptions"
+                    :height="340"
+                />
             </div>
         </section>
 
         <!-- 도넛 + 캡션 2개 (블루 톤) -->
         <section class="panel">
-            <h3>How many dogs or cats arrive at shelters?</h3>
-            <p class="sub">In 2024 were taken in…</p>
+            <h3>보호소 유입 현황</h3>
+            <p class="sub">2024년 유입 현황</p>
             <div class="two">
-                <DonutBlock :pct="split.dogPct" :totalText="`${split.dogs.toLocaleString()} DOGS`" :mainColor="theme.dog" :neutralColor="theme.neutral" height="200" />
+                <DonutBlock
+                    :pct="split.dogPct"
+                    :totalText="`${split.dogs.toLocaleString()} 개`"
+                    :mainColor="theme.dog"
+                    :neutralColor="theme.neutral"
+                    height="200"
+                />
                 <DonutBlock
                     :pct="split.catPct"
-                    :totalText="`${split.cats.toLocaleString()} CATS`"
+                    :totalText="`${split.cats.toLocaleString()} 고양이`"
                     :mainColor="theme.cat"
                     :neutralColor="theme.neutral"
                     height="200"
@@ -240,60 +415,102 @@ const centerTextPlugin = {
         <!-- 중간 3개 (블루 막대 + 고정 높이) -->
         <section class="grid3">
             <div class="card">
-                <h4>What breed are the animals?</h4>
-                <ChartCanvas type="bar" :data="breedData" :options="stackedHBar(true)" :height="170" />
+                <h4>품종 분포</h4>
+                <ChartCanvas
+                    type="bar"
+                    :data="breedData"
+                    :options="stackedHBar(true)"
+                    :height="170"
+                />
             </div>
             <div class="card">
-                <h4>At what age do they arrive?</h4>
-                <ChartCanvas type="bar" :data="ageData" :options="stackedHBar(true)" :height="170" />
+                <h4>나이 분포</h4>
+                <ChartCanvas
+                    type="bar"
+                    :data="ageData"
+                    :options="stackedHBar(true)"
+                    :height="170"
+                />
             </div>
             <div class="card">
-                <h4>What is their health condition when they arrive?</h4>
-                <ChartCanvas type="bar" :data="healthData" :options="stackedHBar(true)" :height="170" />
+                <h4>입소시 건강 상태</h4>
+                <ChartCanvas
+                    type="bar"
+                    :data="healthData"
+                    :options="stackedHBar(true)"
+                    :height="170"
+                />
             </div>
         </section>
 
-        <YearlyArrivalDonut :years="years" :dataByYear="arrivals" :colors="colors" />
+        <YearlyArrivalDonut
+            :years="years"
+            :dataByYear="arrivals"
+            :colors="colors"
+        />
 
         <!-- 크기(개) -->
         <section class="panel">
             <div class="card">
-                <h4>What size are the dogs?</h4>
-                <ChartCanvas type="bar" :data="sizeDogData" :options="hBar" :height="180" />
+                <h4>개 체구 분포</h4>
+                <ChartCanvas
+                    type="bar"
+                    :data="sizeDogData"
+                    :options="hBar"
+                    :height="180"
+                />
             </div>
         </section>
 
         <!-- 계절 -->
         <section class="panel">
             <div class="card tall">
-                <h4>In which season do most animals arrive?</h4>
-                <ChartCanvas type="bar" :data="seasonData" :options="seasonOptions" :plugins="[valueLabelPlugin]" :height="260" />
+                <h4>계절별 유입 현황</h4>
+                <ChartCanvas
+                    type="bar"
+                    :data="seasonData"
+                    :options="seasonOptions"
+                    :plugins="[valueLabelPlugin]"
+                    :height="260"
+                />
             </div>
         </section>
 
         <!-- 마이크로칩 -->
         <section class="panel">
-            <h4>Animals collected that had a microchip</h4>
+            <h4>마이크로칩 등록 현황</h4>
             <div class="two">
                 <div class="mini-donut">
                     <ChartCanvas
                         type="doughnut"
                         :data="chipDogs"
-                        :options="{ plugins: { legend: { display: false }, tooltip: { enabled: false }, centerText: { text: '25%', color: theme.dog } } }"
+                        :options="{
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { enabled: false },
+                                centerText: { text: '25%', color: theme.dog },
+                            },
+                        }"
                         :plugins="[centerTextPlugin]"
                         :height="140"
                     />
-                    <div class="mini-label">Dogs</div>
+                    <div class="mini-label">개</div>
                 </div>
                 <div class="mini-donut">
                     <ChartCanvas
                         type="doughnut"
                         :data="chipCats"
-                        :options="{ plugins: { legend: { display: false }, tooltip: { enabled: false }, centerText: { text: '5%', color: theme.cat } } }"
+                        :options="{
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { enabled: false },
+                                centerText: { text: '5%', color: theme.cat },
+                            },
+                        }"
                         :plugins="[centerTextPlugin]"
                         :height="140"
                     />
-                    <div class="mini-label">Cats</div>
+                    <div class="mini-label">고양이</div>
                 </div>
             </div>
         </section>
@@ -304,7 +521,8 @@ const centerTextPlugin = {
 .stats-page {
     --radius: 14px;
     --shadow: 0 8px 24px rgba(16, 44, 84, 0.08);
-    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans';
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, 'Noto Sans';
     color: #1f2d3d;
     max-width: 1040px;
     margin: 0 auto;

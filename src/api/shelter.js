@@ -11,3 +11,8 @@ export const getShelterPriority = async (params = {}) => {
   });
   return res.data;
 };
+
+export const getAdoptionPriority = async (params) => {
+  const { data } = await api.get('/adoption/get-recommend-adopt-center', { params });
+  return Array.isArray(data) ? data : [];
+};

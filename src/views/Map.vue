@@ -240,6 +240,77 @@ onMounted(() => {
     };
 
     await fetchShelters();
+
+    const specialCoords = [
+      {
+        id: 7,
+        name: '반려동물복지문화센터',
+        addr: '부산광역시 연제구 거제시장로 18-6 6층',
+        tel: '051-853-1335',
+        lat: 35.181284145012,
+        lng: 129.07183578763,
+      },
+      {
+        id: 8,
+        name: '유기동물입양센터',
+        addr: '부산광역시 해운대구 해운대로 1187',
+        tel: '051-749-5680',
+        lat: 35.1795543,
+        lng: 129.0756416,
+      },
+    ];
+
+    specialCoords.forEach((c, idx) => {
+      const marker = new naver.maps.Marker({
+        position: new naver.maps.LatLng(Number(c.lat), Number(c.lng)),
+        map,
+        icon: {
+          url: normalIcon,
+          size: new naver.maps.Size(50, 50),
+          origin: new naver.maps.Point(0, 2),
+          anchor: new naver.maps.Point(27, 30),
+        },
+        title: `입양센터 ${idx + 1}`,
+      });
+
+      const content = `
+        <div class="info-card">
+          <div class="info-header">
+            <h4 class="care-name">${c.name}</h4>
+          </div>
+          <div class="info-body">
+            <p class="info-line">${c.addr}</p>
+            <p class="info-line">전화번호: ${c.tel}</p>
+          </div>
+        </div>
+      `;
+
+      const infowindow = new naver.maps.InfoWindow({
+        content,
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        borderWidth: 0,
+        disableAnchor: false,
+      });
+
+      naver.maps.Event.addListener(marker, 'mouseover', () => {
+        if (isOpenInfo && isOpenInfo !== infowindow) isOpenInfo.close();
+        infowindow.open(map, marker);
+        isOpenInfo = infowindow;
+        highlightPolygon(null);
+        marker.setAnimation(naver.maps.Animation.BOUNCE);
+      });
+
+      naver.maps.Event.addListener(marker, 'mouseout', () => {
+        marker.setAnimation(null);
+        infowindow.close();
+        highlightPolygon(null);
+      });
+
+      markersById[c.id] = marker;
+      infoById[c.id] = infowindow;
+      usernameById[c.id] = c.name;
+    });
     highlightPolygon(null);
   };
 });
