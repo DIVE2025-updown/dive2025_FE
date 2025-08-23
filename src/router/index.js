@@ -30,7 +30,7 @@ const router = createRouter({
                 {
                     path: 'stats',
                     name: 'stats',
-                    component: Stats,
+                    component: Apply2,
                 },
                 {
                     path: 'mypage',
