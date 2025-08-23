@@ -96,7 +96,7 @@
     <div class="content-container" v-if="!isApplying">
       <!-- 오른쪽 지도 -->
       <div class="map-container">
-        <Map :centerCoords="{ lat: 35.154914, lng: 128.8 }" />
+        <Map :centerCoords="{ lat: 35.1395543, lng: 129.0606416 }" />
       </div>
       <!-- 왼쪽 동물 리스트 -->
       <div class="animals-container">
