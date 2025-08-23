@@ -7,16 +7,19 @@ import qs from 'qs';
 export const fetchAnimals = (params) => api.get('/rescued/animals', { params });
 
 // 특정 보호소 총 마릿수
-export const fetchCountByShelter = (shelterId) => api.get(`/rescued/animals/countByShelterId/${shelterId}`);
+export const fetchCountByShelter = (shelterId) =>
+  api.get(`/rescued/animals/countByShelterId/${shelterId}`);
 
 // 등록번호별 총 마릿수
-export const fetchCountByCareRegNo = (careRegNo) => api.get('/rescued/animals/countByCareRegNo', { params: { careRegNo } });
+export const fetchCountByCareRegNo = (careRegNo) =>
+  api.get('/rescued/animals/countByCareRegNo', { params: { careRegNo } });
 
 // 보호소별 동물 카운트 (대시보드)
 export const fetchCountGroupByShelter = () => api.get('/rescued/animals/count-group');
 
 // 특정 보호소 등록번호별 그룹 카운트
-export const fetchCountByShelterGroupByCareRegNo = (shelterId) => api.get('/rescued/animals/count-group/care-reg', { params: { shelterId } });
+export const fetchCountByShelterGroupByCareRegNo = (shelterId) =>
+  api.get('/rescued/animals/count-group/care-reg', { params: { shelterId } });
 
 // ====================== 내 보호소 전용 ======================
 
@@ -37,8 +40,11 @@ export const fetchMyAnimalsGrouped = () => api.get('/rescued/myAnimalList/care-r
 // 이관 후보 동물 조회
 // export const fetchTransferCandidates = (params) => api.get('/rescued/transfer-candidates', { params });
 export const fetchTransferCandidates = (params) => {
-    return api.get('/rescued/transfer-candidates', {
-        params,
-        paramsSerializer: (p) => qs.stringify(p, { arrayFormat: 'repeat' }),
-    });
+  return api.get('/rescued/transfer-candidates', {
+    params,
+    paramsSerializer: (p) => qs.stringify(p, { arrayFormat: 'repeat' }),
+  });
 };
+
+// 입양
+export const fetchAdoptions = (params) => api.get('/adoption/get-adoption-list', { params });
