@@ -5,14 +5,17 @@ import QuickStat from '@/components/stats/QuickStat.vue';
 import DonutBlock from '@/components/stats/DonutBlock.vue';
 import YearlyArrivalDonut from '@/components/stats/YearlyArrivalDonut.vue';
 
-const years = [2019, 2020, 2021, 2022, 2023, 2024];
+const years = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025];
+
 const arrivals = {
-    2019: { dogs: 183103, cats: 123403 },
-    2020: { dogs: 162011, cats: 124142 },
-    2021: { dogs: 167556, cats: 118789 },
-    2022: { dogs: 170105, cats: 118352 },
-    2023: { dogs: 170712, cats: 115970 },
-    2024: { dogs: 173867, cats: 118151 },
+    2018: { dogs: 4366, cats: 3042 },
+    2019: { dogs: 4206, cats: 3763 },
+    2020: { dogs: 3534, cats: 3848 },
+    2021: { dogs: 3085, cats: 3600 },
+    2022: { dogs: 2764, cats: 3219 },
+    2023: { dogs: 2327, cats: 2912 },
+    2024: { dogs: 2169, cats: 2739 },
+    2025: { dogs: 1127, cats: 1795 },
 };
 
 const colors = {
@@ -37,14 +40,13 @@ const theme = reactive({
 });
 
 /** ===== 상단 수치 / 분할 ===== */
-const totals = { total: 292018, perHour: 33, perDay: 800, perMonth: 24335 };
-const split = { dogs: 173867, cats: 118151, dogPct: 59.5, catPct: 40.5 };
-
+const totals = { total: 48496, perHour: 0.7, perDay: 17.4, perMonth: 527.1 };
+const split = { dogs: 2169, cats: 2739, dogPct: 44.2, catPct: 55.8 };
 /** ===== 1) 라인 차트 ===== */
-const lineYears = ['2019', '2020', '2021', '2022', '2023', '2024'];
-const lineTotals = [306045, 296433, 285554, 288487, 286982, 292018];
-const lineDogs = [183103, 162011, 167556, 170105, 170712, 173867];
-const lineCats = [123403, 124142, 118789, 118352, 115970, 118151];
+const lineYears = ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
+const lineTotals = [7408, 7969, 7382, 6685, 5983, 5239, 4908, 2922];
+const lineDogs = [4366, 4206, 3534, 3085, 2764, 2327, 2169, 1127];
+const lineCats = [3042, 3763, 3848, 3600, 3219, 2912, 2739, 1795];
 
 const lineData = computed(() => ({
     labels: lineYears,
@@ -198,7 +200,7 @@ const centerTextPlugin = {
                 <div class="hero-icon">🐶🐱</div>
                 <div class="hero-text">
                     <div class="hero-number">+{{ totals.total.toLocaleString() }}</div>
-                    <div class="hero-desc">Dogs and cats collected by shelters in Spain during 2024</div>
+                    <div class="hero-desc">2018년부터 지금까지 부산시에서 구조된 개와 고양이 수</div>
                 </div>
             </div>
         </section>
